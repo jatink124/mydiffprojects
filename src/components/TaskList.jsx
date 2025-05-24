@@ -20,7 +20,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
       if (categoryFilter && categoryFilter !== 'all') {
         queryParams.append('category', categoryFilter);
       }
-      const url = `http://localhost:5000/api/tasks?${queryParams.toString()}`;
+      const url = `https://mydiffprojects.onrender.com/api/tasks?${queryParams.toString()}`;
       const res = await axios.get(url);
       setTasks(res.data);
     } catch (err) {
@@ -38,7 +38,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
   // Toggles the completion status of a task.
   const toggleComplete = async (task) => {
     try {
-      await axios.put(`http://localhost:5000/api/tasks/${task._id}`, {
+      await axios.put(`https://mydiffprojects.onrender.com/api/tasks/${task._id}`, {
         ...task, completed: !task.completed
       });
       // Removed toast.success, replaced with console log
@@ -60,7 +60,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
   // Confirms and executes the task deletion.
   const handleConfirmDelete = async () => {
     try {
-      await axios.delete(`http://localhost:5000/api/tasks/${taskToDeleteId}`);
+      await axios.delete(`https://mydiffprojects.onrender.com/api/tasks/${taskToDeleteId}`);
       // Removed toast.success, replaced with console log
       console.log('Task deleted successfully!');
       fetchTasks(); // Re-fetch tasks to update the list
