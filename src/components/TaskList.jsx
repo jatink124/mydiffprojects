@@ -10,15 +10,24 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
     const [eisenhowerFilter, setEisenhowerFilter] = useState('all');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [taskToDeleteId, setTaskToDeleteId] = useState(null);
+    const [activeTab, setActiveTab] = useState('All'); // New state for active tab
 
     const categories = ['All', 'General', 'Web Development', 'Trading', 'Personal', 'Work', 'Study', 'Health'];
 
     const fetchTasks = async () => {
         try {
             const queryParams = new URLSearchParams();
-            if (categoryFilter && categoryFilter !== 'all') {
-                queryParams.append('category', categoryFilter);
+            // If the activeTab is not 'All', append it as a category filter
+            if (activeTab && activeTab !== 'All') {
+                queryParams.append('category', activeTab);
             }
+            // Keep existing categoryFilter for the dropdown if needed, but it will be overridden by activeTab
+            // For now, let's make the category filter dropdown control the `categoryFilter` state,
+            // and the tabs control the `activeTab` state, which then drives the API call.
+            // If you want the dropdown to also filter by the current tab's category,
+            // you'd set categoryFilter state to activeTab when a tab is clicked.
+            // For simplicity, I'll link the fetch directly to activeTab for the main category filtering.
+
             const url = `https://mydiffprojects.onrender.com/api/tasks?${queryParams.toString()}`;
             const res = await axios.get(url);
             setTasks(res.data);
@@ -29,8 +38,9 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
     };
 
     useEffect(() => {
+        // Trigger fetchTasks when activeTab changes, along with other filters
         fetchTasks();
-    }, [filter, sortOrder, searchTerm, categoryFilter, eisenhowerFilter, refreshTrigger]);
+    }, [filter, sortOrder, searchTerm, activeTab, eisenhowerFilter, refreshTrigger]); // Added activeTab here
 
     const toggleComplete = async (task) => {
         try {
@@ -87,6 +97,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
             case 'Work': return 'bg-indigo-50 text-indigo-700 ring-indigo-100';
             case 'Study': return 'bg-orange-50 text-orange-700 ring-orange-100';
             case 'Health': return 'bg-teal-50 text-teal-700 ring-teal-100';
+            case 'General': return 'bg-gray-50 text-gray-700 ring-gray-100'; // Added General category color
             default: return 'bg-gray-50 text-gray-700 ring-gray-100';
         }
     };
@@ -187,6 +198,8 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
         });
     };
 
+    // Client-side filtering is applied AFTER the API call, so the activeTab dictates the fetched data.
+    // The other filters then refine the data fetched by the activeTab.
     const clientFilteredTasks = tasks.filter(t => {
         const matchesStatus = (filter === 'completed' && t.completed) ||
             (filter === 'pending' && !t.completed) ||
@@ -215,20 +228,6 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
                             className="w-full p-2 pl-9 border border-gray-300 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200"
                         />
                         <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    </div>
-
-                    {/* Category Filter */}
-                    <div className="relative flex-grow min-w-[110px] sm:min-w-[120px]">
-                        <select
-                            value={categoryFilter}
-                            onChange={(e) => setCategoryFilter(e.target.value)}
-                            className="w-full p-2 border border-gray-300 rounded-lg text-sm sm:text-base appearance-none pr-8 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 cursor-pointer"
-                        >
-                            {categories.map(cat => (
-                                <option key={cat} value={cat === 'All' ? 'all' : cat}>{cat}</option>
-                            ))}
-                        </select>
-                        <svg className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.586 12.586a2 2 0 0 0 2.828 0l3.172-3.172a2 2 0 0 0 0-2.828L15.414 4.586a2 2 0 0 0-2.828 0L9.414 7.758a2 2 0 0 0 0 2.828L12.586 12.586z"></path><path d="M19 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h7"></path></svg>
                     </div>
 
                     {/* Completion Status Filter */}
@@ -276,6 +275,25 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
                         <svg className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                     </div>
                 </div>
+            </div>
+
+            {/* Category Tabs */}
+            <div className="flex flex-wrap gap-2 md:gap-3 mb-6 border-b border-gray-200 pb-2 overflow-x-auto justify-center md:justify-start">
+                {categories.map(category => (
+                    <button
+                        key={category}
+                        onClick={() => setActiveTab(category)}
+                        className={`
+                            px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap
+                            ${activeTab === category
+                                ? 'bg-blue-600 text-white shadow-md'
+                                : 'bg-gray-100 text-gray-700 hover:bg-blue-100 hover:text-blue-700'
+                            }
+                        `}
+                    >
+                        {category}
+                    </button>
+                ))}
             </div>
 
             {displayedTasks.length === 0 ? (
@@ -329,7 +347,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
                                                 <button
                                                     onClick={() => toggleComplete(task)}
                                                     className={`p-1 rounded-full transition-colors duration-200 transform hover:scale-110 active:scale-95
-                                                    ${task.completed ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200' : 'bg-green-100 text-green-600 hover:bg-green-200'}`}
+                                                        ${task.completed ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200' : 'bg-green-100 text-green-600 hover:bg-green-200'}`}
                                                     title={task.completed ? 'Mark as Pending' : 'Mark as Completed'}
                                                 >
                                                     {task.completed ? (
@@ -374,7 +392,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
                                             <button
                                                 onClick={() => toggleComplete(task)}
                                                 className={`p-1 rounded-full transition-colors duration-200
-                                                ${task.completed ? 'bg-yellow-100 text-yellow-600' : 'bg-green-100 text-green-600'}`}
+                                                    ${task.completed ? 'bg-yellow-100 text-yellow-600' : 'bg-green-100 text-green-600'}`}
                                                 title={task.completed ? 'Mark as Pending' : 'Mark as Completed'}
                                             >
                                                 {task.completed ? (
