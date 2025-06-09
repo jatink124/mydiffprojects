@@ -1,28 +1,40 @@
-import React, { useEffect, useState } from 'react';
+// TaskList.jsx
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
+import ReactMarkdown from 'react-markdown'; // Install: npm install react-markdown
 
 export default function TaskList({ onEditTask, refreshTrigger }) {
     const [tasks, setTasks] = useState([]);
     const [filter, setFilter] = useState('all');
     const [sortOrder, setSortOrder] = useState('dueDateAsc');
     const [searchTerm, setSearchTerm] = useState('');
-    const [categoryFilter, setCategoryFilter] = useState('all'); // This state is not directly used for fetching with tabs, but kept for consistency if dropdown is re-enabled.
+    const [categoryFilter, setCategoryFilter] = useState('all');
     const [eisenhowerFilter, setEisenhowerFilter] = useState('all');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [taskToDeleteId, setTaskToDeleteId] = useState(null);
     const [activeTab, setActiveTab] = useState('All');
-    const [selectedTask, setSelectedTask] = useState(null); // New state for task detail modal
-    const [manualRefreshKey, setManualRefreshKey] = useState(0); // State to trigger manual refresh
+    const [selectedTask, setSelectedTask] = useState(null);
+    const [manualRefreshKey, setManualRefreshKey] = useState(0);
+
+    // --- New AI-related states (unchanged, just context) ---
+    const [categoryInsights, setCategoryInsights] = useState({});
+    const [loadingInsights, setLoadingInsights] = useState(false);
+    const [selectedTaskAIAnalysis, setSelectedTaskAIAnalysis] = useState('');
+    const [loadingTaskAI, setLoadingTaskAI] = useState(false);
+    // --- End New AI-related states ---
 
     const categories = ['All', 'General', 'Web Development', 'Trading', 'Personal', 'Work', 'Study', 'Health'];
 
+    // Base URL for your backend API
+    const API_BASE_URL = 'https://mydiffprojects.onrender.com/api'; // Ensure this matches your deployed backend URL
+   const API_BASE = 'http://localhost:5000/api'; // Ensure this matches your deployed backend URL
     const fetchTasks = async () => {
         try {
             const queryParams = new URLSearchParams();
             if (activeTab && activeTab !== 'All') {
                 queryParams.append('category', activeTab);
             }
-            const url = `https://mydiffprojects.onrender.com/api/tasks?${queryParams.toString()}`;
+            const url = `${API_BASE_URL}/tasks?${queryParams.toString()}`;
             const res = await axios.get(url);
             setTasks(res.data);
         } catch (err) {
@@ -31,34 +43,96 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
         }
     };
 
-    // This useEffect hook handles all automatic data fetching:
-    // - On initial component mount
-    // - When filters, sort order, search term, active tab, or Eisenhower filter changes
-    // - When a parent component triggers a refresh via refreshTrigger
-    // - When the manual refresh button is clicked (via manualRefreshKey)
+    // Function to fetch AI insights for a given category using Gemini
+    const fetchAIInsights = useCallback(async (category) => {
+        if (category === 'All') {
+            setCategoryInsights(prev => ({ ...prev, [category]: 'Please select a specific task category above to get AI insights.' }));
+            return;
+        }
+
+        setLoadingInsights(true);
+        try {
+            const tasksForPrompt = tasks.filter(task => task.category === category);
+            const taskSummaries = tasksForPrompt.map(task =>
+                `- Title: ${task.title}\n  Description: ${task.description || 'N/A'}\n  Due: ${new Date(task.dueDate).toLocaleDateString()}, Priority: ${task.priority}`
+            ).join('\n\n');
+
+            const prompt = `Analyze the following tasks in the "${category}" category. Provide a brief summary, identify any key themes or recurring challenges, and suggest a strategic approach for managing them effectively. Be concise and focus on actionable advice, structured clearly with bullet points or numbered lists.
+            \n---
+            Tasks:\n${taskSummaries || 'No specific tasks found in this category. Suggest general strategies for this type of category.'}`;
+
+            // Call your backend endpoint for Gemini analysis
+            const res = await axios.post(`${API_BASE}/gemini/gemini-analysis`, { prompt });
+            setCategoryInsights(prev => ({ ...prev, [category]: res.data }));
+        } catch (err) {
+            console.error(`Failed to fetch Gemini insights for ${category}:`, err);
+            setCategoryInsights(prev => ({ ...prev, [category]: 'Failed to load Gemini insights. Please try again or check server connection.' }));
+        } finally {
+            setLoadingInsights(false);
+        }
+    }, [tasks]);
+
+    // Function to fetch AI strategy for a selected task using Gemini
+    const fetchTaskAIStrategy = async (task) => {
+        setLoadingTaskAI(true);
+        setSelectedTaskAIAnalysis('');
+
+        try {
+            const prompt = `Generate a detailed step-by-step plan or strategic approach to effectively complete the following task. Focus on practical steps, potential challenges, and optimal workflow. Provide the plan as a clear numbered list or bullet points.
+
+            \n---
+            Task Details:
+            Title: "${task.title}"
+            Description: "${task.description || 'No description provided.'}"
+            Due Date: "${new Date(task.dueDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}"
+            Priority: "${task.priority}"
+            Category: "${task.category || 'General'}"
+            Eisenhower Quadrant: "${task.eisenhowerQuadrant || 'Not Classified'}"
+            \n---
+            Strategic Plan:`;
+
+            // Call your backend endpoint for Gemini analysis
+            const res = await axios.post(`${API_BASE}/gemini/gemini-analysis`, { prompt });
+            setSelectedTaskAIAnalysis(res.data);
+        } catch (err) {
+            console.error('Failed to fetch Gemini strategy for task:', err);
+            setSelectedTaskAIAnalysis('Failed to generate Gemini strategy. Please try again or check server connection.');
+        } finally {
+            setLoadingTaskAI(false);
+        }
+    };
+
+
     useEffect(() => {
         fetchTasks();
     }, [filter, sortOrder, searchTerm, activeTab, eisenhowerFilter, refreshTrigger, manualRefreshKey]);
 
-    // Function to trigger a manual data refresh
+    useEffect(() => {
+        if (tasks.length > 0 || activeTab === 'All') {
+             fetchAIInsights(activeTab);
+        } else if (activeTab !== 'All') {
+            setCategoryInsights(prev => ({ ...prev, [activeTab]: 'No tasks in this category to analyze. Showing general advice.' }));
+            fetchAIInsights(activeTab);
+        }
+    }, [activeTab, tasks, fetchAIInsights]);
+
+
     const handleManualRefresh = () => {
-        setManualRefreshKey(prevKey => prevKey + 1); // Incrementing the key forces useEffect to re-run
+        setManualRefreshKey(prevKey => prevKey + 1);
     };
 
     const toggleComplete = async (task) => {
         try {
-            await axios.put(`https://mydiffprojects.onrender.com/api/tasks/${task._id}`, {
+            await axios.put(`${API_BASE_URL}/tasks/${task._id}`, {
                 ...task, completed: !task.completed
             });
             console.log(`Task marked as ${task.completed ? 'pending' : 'completed'}!`);
-            fetchTasks(); // Refresh tasks after update
-            // If the detailed modal is open for this task, update its state
+            fetchTasks();
             if (selectedTask && selectedTask._id === task._id) {
                 setSelectedTask(prev => ({ ...prev, completed: !prev.completed }));
             }
         } catch (err) {
             console.error('Failed to update task status:', err);
-            // Optionally, show a user-friendly error message
         }
     };
 
@@ -69,15 +143,14 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
 
     const handleConfirmDelete = async () => {
         try {
-            await axios.delete(`https://mydiffprojects.onrender.com/api/tasks/${taskToDeleteId}`);
+            await axios.delete(`${API_BASE_URL}/tasks/${taskToDeleteId}`);
             console.log('Task deleted successfully!');
-            fetchTasks(); // Refresh tasks after deletion
+            fetchTasks();
             setShowDeleteConfirm(false);
             setTaskToDeleteId(null);
-            setSelectedTask(null); // Close detail modal if the task being viewed is deleted
+            setSelectedTask(null);
         } catch (err) {
             console.error('Failed to delete task:', err);
-            // Optionally, show a user-friendly error message
         }
     };
 
@@ -88,10 +161,12 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
 
     const handleCardClick = (task) => {
         setSelectedTask(task);
+        fetchTaskAIStrategy(task); // Trigger Gemini analysis for the selected task
     };
 
     const closeDetailModal = () => {
         setSelectedTask(null);
+        setSelectedTaskAIAnalysis('');
     };
 
     const getPriorityColor = (priority) => {
@@ -219,7 +294,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
             (filter === 'pending' && !t.completed) ||
             filter === 'all';
         const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            t.description?.toLowerCase().includes(searchTerm.toLowerCase()); // Added optional chaining for description
+            t.description?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesEisenhower = (eisenhowerFilter === 'all' || t.eisenhowerQuadrant === eisenhowerFilter);
 
         return matchesStatus && matchesSearch && matchesEisenhower;
@@ -320,6 +395,26 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
                 ))}
             </div>
 
+            {/* AI Insights for Category */}
+            {activeTab && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <h3 className="text-lg font-bold text-blue-800 mb-2">
+                        AI Insights for "{activeTab}" Category
+                    </h3>
+                    {loadingInsights ? (
+                        <div className="flex items-center text-blue-700">
+                            <svg className="animate-spin h-5 w-5 mr-3 text-blue-500" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            <span>Generating category insights...</span>
+                        </div>
+                    ) : (
+                        <div className="prose prose-sm max-w-none text-blue-900">
+                             <ReactMarkdown>{categoryInsights[activeTab] || 'No AI insights available. Select a category.'}</ReactMarkdown>
+                        </div>
+                    )}
+                </div>
+            )}
+
+
             {displayedTasks.length === 0 ? (
                 <div className="text-center py-12 md:py-16 text-gray-500 text-lg md:text-xl bg-gray-50 rounded-lg border border-gray-200 flex flex-col items-center justify-center">
                     <svg className="text-4xl md:text-5xl mb-3 md:mb-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
@@ -337,7 +432,6 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
                                     hover:shadow-lg transition-shadow duration-200 cursor-pointer relative group`}
                                 onClick={() => handleCardClick(task)}
                             >
-                                {/* Overlay for hover effect - for broad detail, this is replaced by the modal */}
                                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-5 transition-all duration-200 rounded-lg"></div>
 
                                 <div>
@@ -458,60 +552,62 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
                             )}
                             <div>
                                 <p className="font-semibold text-gray-700 mb-1">Status:</p>
-                                <span className={`px-3 py-1 text-sm font-semibold rounded-full ring-1 ${selectedTask.completed ? 'bg-green-100 text-green-700 ring-green-200' : 'bg-red-100 text-red-700 ring-red-200'}`}>
+                                <span className={`px-3 py-1 text-sm font-semibold rounded-full ${selectedTask.completed ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                                     {selectedTask.completed ? 'Completed' : 'Pending'}
                                 </span>
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-3 mt-6">
+                        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <h4 className="font-bold text-blue-800 mb-2">AI Strategic Plan:</h4>
+                            {loadingTaskAI ? (
+                                <div className="flex items-center text-blue-700">
+                                    <svg className="animate-spin h-5 w-5 mr-3 text-blue-500" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    <span>Generating strategic plan...</span>
+                                </div>
+                            ) : (
+                                <div className="prose prose-sm max-w-none text-blue-900">
+                                    <ReactMarkdown>{selectedTaskAIAnalysis || 'No AI strategic plan available for this task.'}</ReactMarkdown>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex justify-end gap-3 mt-5">
                             <button
-                                onClick={() => {
-                                    toggleComplete(selectedTask);
-                                    // Keep modal open after toggle, but update content
-                                }}
-                                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200
-                                    ${selectedTask.completed ? 'bg-yellow-500 text-white hover:bg-yellow-600' : 'bg-green-500 text-white hover:bg-green-600'}`}
+                                onClick={(e) => { e.stopPropagation(); onEditTask(selectedTask); closeDetailModal(); }}
+                                className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200 flex items-center gap-2"
                             >
-                                {selectedTask.completed ? 'Mark as Pending' : 'Mark as Completed'}
-                            </button>
-                            <button
-                                onClick={() => {
-                                    onEditTask(selectedTask);
-                                    closeDetailModal(); // Close modal after initiating edit
-                                }}
-                                className="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors duration-200"
-                            >
+                                <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 Edit Task
                             </button>
                             <button
-                                onClick={() => handleDeleteClick(selectedTask._id)}
-                                className="px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors duration-200"
+                                onClick={(e) => { e.stopPropagation(); handleDeleteClick(selectedTask._id); closeDetailModal(); }}
+                                className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors duration-200 flex items-center gap-2"
                             >
-                                Delete
+                                <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                Delete Task
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-
+            {/* Delete Confirmation Modal */}
             {showDeleteConfirm && (
-                <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm md:max-w-md text-center transform transition-all duration-300 scale-100 opacity-100">
-                        <svg className="text-5xl md:text-6xl mx-auto mb-4 text-red-500" xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                        <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-3">Confirm Deletion</h3>
-                        <p className="text-gray-600 text-sm md:text-base mb-6">Are you sure you want to delete this task? This action cannot be undone.</p>
-                        <div className="flex justify-center gap-3">
+                <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fade-in">
+                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm transform scale-100 opacity-100 animate-zoom-in">
+                        <h3 className="text-xl font-bold text-red-800 mb-4">Confirm Deletion</h3>
+                        <p className="text-gray-700 mb-6">Are you sure you want to delete this task? This action cannot be undone.</p>
+                        <div className="flex justify-end gap-3">
                             <button
                                 onClick={handleCancelDelete}
-                                className="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors duration-200 font-medium"
+                                className="px-4 py-2 rounded-md bg-gray-200 text-gray-800 hover:bg-gray-300 transition-colors duration-200"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleConfirmDelete}
-                                className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium"
+                                className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors duration-200"
                             >
                                 Delete
                             </button>
