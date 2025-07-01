@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Website Builder Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.11/dist/interact.min.js"></script>
+    <style>
+        .component-placeholder { border: 2px dashed #9CA3AF; background: #F3F4F6; min-height: 80px; display: flex; align-items: center; justify-content: center; color: #6B7280; }
+        .sortable-ghost { opacity: 0.5; background: #C7D2FE; }
+        .resize-handle { width: 10px; height: 10px; background: #3B82F6; position: absolute; right: 0; bottom: 0; cursor: nwse-resize; }
+        .guide-line { position: absolute; background: rgba(59, 130, 246, 0.5); z-index: 1000; }
+        .alignment-feedback { position: absolute; background: rgba(34, 197, 94, 0.3); border: 1px dashed #22C55E; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab-button.active { border-bottom: 2px solid #4F46E5; color: #4F46E5; }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- Top Toolbar -->
+    <header class="bg-white shadow-sm py-3 px-6 flex justify-between items-center">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-2xl font-bold text-indigo-600">✨ AI Website Builder</h1>
+            <button id="start-tour" class="px-3 py-1 bg-blue-50 text-blue-600 rounded-md text-sm flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Quick Tour
+            </button>
+        </div>
+        <div class="flex space-x-3">
+            <button id="undo-btn" class="p-2 text-gray-500 hover:text-indigo-600" title="Undo (Ctrl+Z)">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+            </button>
+            <button id="redo-btn" class="p-2 text-gray-500 hover:text-indigo-600" title="Redo (Ctrl+Y)">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+            </button>
+            <button id="save-version" class="px-3 py-1 bg-indigo-600 text-white rounded-md text-sm">Save Version</button>
+            <select id="export-options" class="border rounded-md px-2 py-1 text-sm bg-white">
+                <option>Export As...</option>
+                <option value="html">HTML/CSS</option>
+                <option value="react">React Components</option>
+                <option value="wordpress">WordPress Theme</option>
+            </select>
+        </div>
+    </header>
+
+    <div class="flex h-screen pt-16">
+        <!-- Left Sidebar (Components + AI Tools) -->
+        <div class="w-72 bg-white border-r p-4 overflow-y-auto">
+            <!-- AI Layout Suggestions -->
+            <div class="mb-6 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                <h3 class="font-medium text-blue-800 mb-2 flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    AI Layout Assistant
+                </h3>
+                <select id="layout-type" class="w-full p-2 border rounded text-sm mb-2">
+                    <option value="">Select Website Type</option>
+                    <option value="portfolio">Portfolio</option>
+                    <option value="business">Business</option>
+                    <option value="ecommerce">E-commerce</option>
+                </select>
+                <button id="apply-layout" class="w-full bg-blue-600 text-white py-1 px-3 rounded text-sm">Apply Suggested Layout</button>
+            </div>
+
+            <!-- Pre-built Components -->
+            <div class="mb-6">
+                <h3 class="font-medium text-gray-700 mb-2">Components</h3>
+                <div class="space-y-2" id="components-list">
+                    <!-- Components injected via JS -->
+                </div>
+            </div>
+
+            <!-- Custom Component Creator -->
+            <div class="mb-6 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                <h3 class="font-medium text-gray-700 mb-2">Create Custom Component</h3>
+                <input type="text" id="component-name" placeholder="Component Name" class="w-full p-2 border rounded text-sm mb-2">
+                <textarea id="component-html" placeholder="Paste HTML here" class="w-full p-2 border rounded text-sm h-20 mb-2"></textarea>
+                <button id="add-custom-component" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded text-sm">Add Component</button>
+            </div>
+
+            <!-- Template Blocks -->
+            <div class="mb-6 bg-green-50 p-3 rounded-lg border border-green-200">
+                <h3 class="font-medium text-gray-700 mb-2">Template Blocks</h3>
+                <select id="template-type" class="w-full p-2 border rounded text-sm mb-2">
+                    <option value="">Select Template</option>
+                    <option value="restaurant">Restaurant</option>
+                    <option value="photographer">Photographer</option>
+                </select>
+                <button id="apply-template" class="w-full bg-green-600 text-white py-1 px-3 rounded text-sm">Insert Template</button>
+            </div>
+        </div>
+
+        <!-- Main Canvas Area -->
+        <div class="flex-1 p-6 overflow-auto bg-gray-100">
+            <div class="bg-white rounded-lg shadow-md min-h-full p-6">
+                <div id="website-canvas" class="space-y-6">
+                    <div class="component-placeholder" id="empty-state">
+                        Drag components here to start building
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar (Editing + SEO + Theme) -->
+        <div class="w-80 bg-white border-l p-4 overflow-y-auto">
+            <!-- Tab Navigation -->
+            <div class="flex border-b mb-4">
+                <button class="tab-button active px-4 py-2 text-sm font-medium" data-tab="properties">Properties</button>
+                <button class="tab-button px-4 py-2 text-sm font-medium" data-tab="theme">Theme</button>
+                <button class="tab-button px-4 py-2 text-sm font-medium" data-tab="seo">SEO</button>
+                <button class="tab-button px-4 py-2 text-sm font-medium" data-tab="accessibility">Accessibility</button>
+            </div>
+
+            <!-- Properties Panel -->
+            <div id="properties-panel" class="tab-content active">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Component Type</label>
+                    <input type="text" id="current-component-type" class="w-full p-2 border rounded text-sm" readonly>
+                </div>
+                <div class="space-y-4">
+                    <!-- Dynamic properties load here -->
+                </div>
+            </div>
+
+            <!-- Theme Editor -->
+            <div id="theme-panel" class="tab-content hidden">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Primary Color</label>
+                    <input type="color" id="primary-color" value="#3B82F6" class="w-full h-10">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Font Family</label>
+                    <select id="font-family" class="w-full p-2 border rounded text-sm">
+                        <option value="sans-serif">Sans-serif</option>
+                        <option value="serif">Serif</option>
+                        <option value="monospace">Monospace</option>
+                    </select>
+                </div>
+                <button id="apply-theme" class="w-full bg-indigo-600 text-white py-2 px-4 rounded text-sm mt-2">Apply Theme</button>
+            </div>
+
+            <!-- SEO Panel -->
+            <div id="seo-panel" class="tab-content hidden">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Page Title</label>
+                    <input type="text" id="seo-title" class="w-full p-2 border rounded text-sm" placeholder="Best Website Builder - AI Pro">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Meta Description</label>
+                    <textarea id="seo-description" class="w-full p-2 border rounded text-sm h-20"></textarea>
+                </div>
+                <div class="p-3 bg-blue-50 rounded text-sm">
+                    <div class="font-medium text-blue-800 mb-1">SEO Score: <span id="seo-score">85</span>/100</div>
+                    <div class="text-blue-700" id="seo-suggestions">✅ Good title length ✏️ Add more keywords</div>
+                </div>
+            </div>
+
+            <!-- Accessibility Panel -->
+            <div id="accessibility-panel" class="tab-content hidden">
+                <div class="p-3 bg-purple-50 rounded text-sm mb-3">
+                    <div class="font-medium text-purple-800 mb-1">Accessibility Score: <span id="a11y-score">78</span>/100</div>
+                    <ul class="list-disc pl-5 text-purple-700 space-y-1" id="a11y-issues">
+                        <li>Check contrast on buttons</li>
+                        <li>Add alt text to images</li>
+                    </ul>
+                </div>
+                <button id="fix-a11y" class="w-full bg-purple-600 text-white py-2 px-4 rounded text-sm">Auto-Fix Issues</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="preview-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl w-11/12 max-w-4xl h-5/6 flex flex-col">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="text-lg font-medium">Live Preview</h3>
+                <button id="close-preview" class="text-gray-500 hover:text-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="flex-1 flex">
+                <div class="w-1/4 border-r p-3 space-y-2">
+                    <button class="w-full py-1 px-3 bg-gray-200 rounded text-sm" data-device="desktop">Desktop</button>
+                    <button class="w-full py-1 px-3 bg-blue-100 rounded text-sm" data-device="tablet">Tablet</button>
+                    <button class="w-full py-1 px-3 bg-blue-50 rounded text-sm" data-device="mobile">Mobile</button>
+                </div>
+                <div class="flex-1 p-4 overflow-auto">
+                    <div id="preview-content" class="mx-auto" style="max-width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tutorial Modal -->
+    <div id="tutorial-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl w-96 p-6">
+            <h3 class="text-xl font-medium mb-4">Welcome to AI Website Builder!</h3>
+            <div class="space-y-3 mb-6">
+                <div class="flex items-start gap-3">
+                    <div class="bg-blue-100 p-1 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="font-medium">Drag and Drop</h4>
+                        <p class="text-sm text-gray-600">Drag components from the left panel to the canvas</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <div class="bg-purple-100 p-1 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2.5M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="font-medium">Customize Everything</h4>
+                        <p class="text-sm text-gray-600">Edit properties in the right panel</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <div class="bg-green-100 p-1 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="font-medium">Templates & AI</h4>
+                        <p class="text-sm text-gray-600">Use pre-made templates or AI suggestions</p>
+                    </div>
+                </div>
+            </div>
+            <button id="close-tutorial" class="w-full bg-indigo-600 text-white py-2 px-4 rounded">Get Started</button>
+        </div>
+    </div>
+
+    <script>
+        // ========================
+        // MAIN APPLICATION CODE
+        // ========================
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const canvas = document.getElementById('website-canvas');
+            const componentsList = document.getElementById('components-list');
+            const emptyState = document.getElementById('empty-state');
+            const previewModal = document.getElementById('preview-modal');
+            const previewContent = document.getElementById('preview-content');
+            const tutorialModal = document.getElementById('tutorial-modal');
+
+            // State Management
+            let currentState = [];
+            let historyStack = [];
+            let historyPointer = -1;
+            let selectedComponent = null;
+
+            // Initialize the builder
+            initBuilder();
+
+            // ========================
+            // CORE FUNCTIONS
+            // ========================
+
+            function initBuilder() {
+                loadPrebuiltComponents();
+                setupDragAndDrop();
+                setupResizableComponents();
+                setupTabs();
+                setupEventListeners();
+                setupKeyboardShortcuts();
+                startTutorial();
+            }
+
+            function loadPrebuiltComponents() {
+                const components = [
+                    { type: 'navbar', name: 'Navigation Bar', icon: 'menu', category: 'structure' },
+                    { type: 'hero', name: 'Hero Section', icon: 'photograph', category: 'content' },
+                    { type: 'features', name: 'Features Grid', icon: 'collection', category: 'content' },
+                    { type: 'testimonials', name: 'Testimonials', icon: 'chat', category: 'content' },
+                    { type: 'contact', name: 'Contact Form', icon: 'mail', category: 'form' },
+                    { type: 'footer', name: 'Footer', icon: 'footer', category: 'structure' }
+                ];
+
+                componentsList.innerHTML = components.map(comp => `
+                    <div draggable="true" data-type="${comp.type}" class="component-item p-3 bg-indigo-50 rounded border border-indigo-100 cursor-move hover:bg-indigo-100 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M${comp.icon === 'menu' ? '4 6h16M4 12h16M4 18h16' : 
+                              comp.icon === 'photograph' ? '4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' :
+                              comp.icon === 'collection' ? '19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' :
+                              comp.icon === 'chat' ? '8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' :
+                              comp.icon === 'mail' ? '3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' :
+                              'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'}" />
+                        </svg>
+                        <span>${comp.name}</span>
+                    </div>
+                `).join('');
+            }
+
+            // ========================
+            // DRAG & DROP + RESIZE
+            // ========================
+
+            function setupDragAndDrop() {
+                // Make canvas sortable
+                new Sortable(canvas, {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    onAdd: function(evt) {
+                        if (emptyState && evt.to === canvas) {
+                            emptyState.remove();
+                            emptyState = null;
+                        }
+                        saveState();
+                    },
+                    onEnd: function() {
+                        saveState();
+                    }
+                });
+
+                // Handle drops from component panel
+                canvas.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                });
+
+                canvas.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    const componentType = e.dataTransfer.getData('text/plain');
+                    
+                    if (componentType.startsWith('custom-')) {
+                        const componentHtml = e.dataTransfer.getData('text/html');
+                        addComponentToCanvas(componentType, componentHtml);
+                    } else {
+                        addComponentToCanvas(componentType);
+                    }
+                    
+                    if (emptyState) {
+                        emptyState.remove();
+                        emptyState = null;
+                    }
+                    saveState();
+                });
+            }
+
+            function setupResizableComponents() {
+                interact('.dropped-component').resizable({
+                    edges: { right: true, bottom: true },
+                    listeners: {
+                        move: function(event) {
+                            const target = event.target;
+                            target.style.width = event.rect.width + 'px';
+                            target.style.height = event.rect.height + 'px';
+                        }
+                    },
+                    modifiers: [
+                        interact.modifiers.restrictSize({
+                            min: { width: 100, height: 50 }
+                        })
+                    ]
+                });
+            }
+
+            // ========================
+            // COMPONENT MANAGEMENT
+            // ========================
+
+            function addComponentToCanvas(type, customHtml = null) {
+                const componentDiv = document.createElement('div');
+                componentDiv.className = 'dropped-component bg-white p-4 rounded-lg border border-gray-200 shadow-sm relative group';
+                componentDiv.dataset.type = type;
+                
+                // Add delete button
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'absolute top-2 right-2 p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity';
+                deleteBtn.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                `;
+                deleteBtn.addEventListener('click', function() {
+                    componentDiv.remove();
+                    saveState();
+                    // Show empty state if canvas is empty
+                    if (canvas.children.length === 0) {
+                        emptyState = document.createElement('div');
+                        emptyState.className = 'component-placeholder';
+                        emptyState.id = 'empty-state';
+                        emptyState.textContent = 'Drag components here to start building';
+                        canvas.appendChild(emptyState);
+                    }
+                });
+                componentDiv.appendChild(deleteBtn);
+                
+                // Add edit button
+                const editBtn = document.createElement('button');
+                editBtn.className = 'absolute top-2 right-10 p-1 text-gray-400 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity';
+                editBtn.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                `;
+                editBtn.addEventListener('click', function() {
+                    selectedComponent = componentDiv;
+                    updatePropertiesPanel(type);
+                });
+                componentDiv.appendChild(editBtn);
+                
+                // Add resize handle
+                const resizeHandle = document.createElement('div');
+                resizeHandle.className = 'resize-handle';
+                componentDiv.appendChild(resizeHandle);
+                
+                // Add content based on type
+                if (customHtml) {
+                    componentDiv.innerHTML += customHtml;
+                } else {
+                    componentDiv.innerHTML += getComponentHTML(type);
+                }
+                
+                // Make draggable for reordering
+                componentDiv.draggable = true;
+                componentDiv.addEventListener('dragstart', function(e) {
+                    e.dataTransfer.setData('text/plain', 'reorder');
+                    this.style.opacity = '0.5';
+                });
+                
+                componentDiv.addEventListener('dragend', function() {
+                    this.style.opacity = '1';
+                });
+                
+                // Click to select
+                componentDiv.addEventListener('click', function() {
+                    selectedComponent = componentDiv;
+                    updatePropertiesPanel(type);
+                });
+                
+                canvas.appendChild(componentDiv);
+                setupResizableComponents(); // Reinitialize for new component
+            }
+
+            function getComponentHTML(type) {
+                const components = {
+                    'navbar': `
+                        <nav class="flex items-center justify-between flex-wrap bg-indigo-600 p-4 rounded">
+                            <div class="flex items-center flex-shrink-0 text-white mr-6">
+                                <span class="font-semibold text-xl tracking-tight">Your Logo</span>
+                            </div>
+                            <div class="w-full block flex-grow lg:flex lg:items-center lg:w-auto">
+                                <div class="text-sm lg:flex-grow">
+                                    <a href="#responsive-header" class="block mt-4 lg:inline-block lg:mt-0 text-indigo-200 hover:text-white mr-4">
+                                        Home
+                                    </a>
+                                    <a href="#responsive-header" class="block mt-4 lg:inline-block lg:mt-0 text-indigo-200 hover:text-white mr-4">
+                                        About
+                                    </a>
+                                    <a href="#responsive-header" class="block mt-4 lg:inline-block lg:mt-0 text-indigo-200 hover:text-white mr-4">
+                                        Services
+                                    </a>
+                                    <a href="#responsive-header" class="block mt-4 lg:inline-block lg:mt-0 text-indigo-200 hover:text-white">
+                                        Contact
+                                    </a>
+                                </div>
+                            </div>
+                        </nav>
+                    `,
+                    'hero': `
+                        <div class="bg-blue-600 text-white p-12 rounded-lg text-center">
+                            <h1 class="text-4xl font-bold mb-4">Welcome to Our Website</h1>
+                            <p class="text-xl mb-8 max-w-2xl mx-auto">We provide amazing services that will help grow your business exponentially.</p>
+                            <button class="bg-white text-blue-600 font-semibold py-2 px-6 rounded-full hover:bg-blue-50 transition duration-200">
+                                Get Started
+                            </button>
+                        </div>
+                    `,
+                    'features': `
+                        <div class="py-8">
+                            <h2 class="text-2xl font-bold text-center mb-8">Our Features</h2>
+                            <div class="grid md:grid-cols-3 gap-6">
+                                <div class="bg-gray-50 p-6 rounded-lg">
+                                    <div class="text-green-500 mb-4">
+                                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
+                                    </div>
+                                    <h3 class="font-semibold text-lg mb-2">Fast Service</h3>
+                                    <p class="text-gray-600">We deliver results quickly without compromising quality.</p>
+                                </div>
+                                <div class="bg-gray-50 p-6 rounded-lg">
+                                    <div class="text-blue-500 mb-4">
+                                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                                        </svg>
+                                    </div>
+                                    <h3 class="font-semibold text-lg mb-2">Cloud Solutions</h3>
+                                    <p class="text-gray-600">Access your data from anywhere with our cloud platform.</p>
+                                </div>
+                                <div class="bg-gray-50 p-6 rounded-lg">
+                                    <div class="text-purple-500 mb-4">
+                                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                        </svg>
+                                    </div>
+                                    <h3 class="font-semibold text-lg mb-2">Secure</h3>
+                                    <p class="text-gray-600">Your data is protected with enterprise-grade security.</p>
+                                </div>
+                            </div>
+                        </div>
+                    `,
+                    'testimonials': `
+                        <div class="py-12 bg-gray-50 rounded-lg">
+                            <div class="max-w-4xl mx-auto px-4">
+                                <h2 class="text-2xl font-bold text-center mb-12">What Our Clients Say</h2>
+                                <div class="grid md:grid-cols-2 gap-8">
+                                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                                        <div class="flex items-center mb-4">
+                                            <img class="w-12 h-12 rounded-full mr-4" src="https://randomuser.me/api/portraits/women/44.jpg" alt="Client">
+                                            <div>
+                                                <h4 class="font-semibold">Sarah Johnson</h4>
+                                                <p class="text-gray-600 text-sm">CEO, TechCorp</p>
+                                            </div>
+                                        </div>
+                                        <p class="text-gray-700">"This service transformed our business operations. Highly recommended!"</p>
+                                    </div>
+                                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                                        <div class="flex items-center mb-4">
+                                            <img class="w-12 h-12 rounded-full mr-4" src="https://randomuser.me/api/portraits/men/32.jpg" alt="Client">
+                                            <div>
+                                                <h4 class="font-semibold">Michael Chen</h4>
+                                                <p class="text-gray-600 text-sm">Marketing Director</p>
+                                            </div>
+                                        </div>
+                                        <p class="text-gray-700">"The team was professional and delivered beyond our expectations."</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `,
+                    'contact': `
+                        <div class="py-8">
+                            <h2 class="text-2xl font-bold text-center mb-8">Contact Us</h2>
+                            <div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-sm">
+                                <form>
+                                    <div class="mb-4">
+                                        <label class="block text-gray-700 text-sm font-bold mb-2" for="name">
+                                            Name
+                                        </label>
+                                        <input class="w-full px-3 py-2 border rounded" id="name" type="text" placeholder="Your name">
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
+                                            Email
+                                        </label>
+                                        <input class="w-full px-3 py-2 border rounded" id="email" type="email" placeholder="Your email">
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="block text-gray-700 text-sm font-bold mb-2" for="message">
+                                            Message
+                                        </label>
+                                        <textarea class="w-full px-3 py-2 border rounded" id="message" rows="4" placeholder="Your message"></textarea>
+                                    </div>
+                                    <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
+                                        Send Message
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    `,
+                    'footer': `
+                        <footer class="bg-gray-800 text-white p-8 rounded-lg">
+                            <div class="container mx-auto">
+                                <div class="grid md:grid-cols-4 gap-8">
+                                    <div>
+                                        <h3 class="text-lg font-semibold mb-4">Company</h3>
+                                        <ul class="space-y-2">
+                                            <li><a href="#" class="hover:text-gray-300">About Us</a></li>
+                                            <li><a href="#" class="hover:text-gray-300">Careers</a></li>
+                                            <li><a href="#" class="hover:text-gray-300">News</a></li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-semibold mb-4">Products</h3>
+                                        <ul class="space-y-2">
+                                            <li><a href="#" class="hover:text-gray-300">Features</a></li>
+                                            <li><a href="#" class="hover:text-gray-300">Pricing</a></li>
+                                            <li><a href="#" class="hover:text-gray-300">API</a></li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-semibold mb-4">Resources</h3>
+                                        <ul class="space-y-2">
+                                            <li><a href="#" class="hover:text-gray-300">Documentation</a></li>
+                                            <li><a href="#" class="hover:text-gray-300">Guides</a></li>
+                                            <li><a href="#" class="hover:text-gray-300">Support</a></li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-semibold mb-4">Contact</h3>
+                                        <p class="mb-2">123 Business Ave</p>
+                                        <p class="mb-2">New York, NY 10001</p>
+                                        <p class="mb-2">info@example.com</p>
+                                    </div>
+                                </div>
+                                <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+                                    <p>&copy; 2023 Your Company. All rights reserved.</p>
+                                </div>
+                            </div>
+                        </footer>
+                    `
+                };
+                return components[type] || '<div class="p-4 bg-gray-100 rounded">Custom Component</div>';
+            }
+
+            // ========================
+            // PROPERTIES PANEL
+            // ========================
+
+            function updatePropertiesPanel(type) {
+                document.getElementById('current-component-type').value = type;
+                const propertiesPanel = document.querySelector('#properties-panel .space-y-4');
+                
+                // Clear existing properties
+                propertiesPanel.innerHTML = '';
+                
+                // Add dynamic properties based on component type
+                const properties = getComponentProperties(type);
+                properties.forEach(prop => {
+                    const propDiv = document.createElement('div');
+                    propDiv.className = 'property-group';
+                    propDiv.innerHTML = `
+                        <label class="block text-sm font-medium text-gray-700 mb-1">${prop.label}</label>
+                        ${prop.type === 'text' ? 
+                            `<input type="text" class="w-full p-2 border rounded text-sm" value="${prop.value}">` :
+                        prop.type === 'color' ? 
+                            `<input type="color" class="w-full h-10" value="${prop.value}">` :
+                        prop.type === 'select' ? 
+                            `<select class="w-full p-2 border rounded text-sm">
+                                ${prop.options.map(opt => `<option value="${opt.value}" ${opt.value === prop.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                            </select>` :
+                        prop.type === 'textarea' ?
+                            `<textarea class="w-full p-2 border rounded text-sm">${prop.value}</textarea>` :
+                        ''}
+                    `;
+                    propertiesPanel.appendChild(propDiv);
+                });
+            }
+
+            function getComponentProperties(type) {
+                const properties = {
+                    'navbar': [
+                        { label: 'Background Color', type: 'color', value: '#4F46E5' },
+                        { label: 'Logo Text', type: 'text', value: 'Your Logo' },
+                        { label: 'Menu Items', type: 'text', value: 'Home, About, Services, Contact' }
+                    ],
+                    'hero': [
+                        { label: 'Title', type: 'text', value: 'Welcome to Our Website' },
+                        { label: 'Subtitle', type: 'textarea', value: 'We provide amazing services that will help grow your business exponentially.' },
+                        { label: 'Button Text', type: 'text', value: 'Get Started' },
+                        { label: 'Background Color', type: 'color', value: '#2563EB' }
+                    ],
+                    'features': [
+                        { label: 'Title', type: 'text', value: 'Our Features' },
+                        { label: 'Layout', type: 'select', value: '3', options: [
+                            { value: '2', label: '2 Columns' },
+                            { value: '3', label: '3 Columns' },
+                            { value: '4', label: '4 Columns' }
+                        ]}
+                    ],
+                    'testimonials': [
+                        { label: 'Title', type: 'text', value: 'What Our Clients Say' },
+                        { label: 'Background Color', type: 'color', value: '#F3F4F6' }
+                    ],
+                    'contact': [
+                        { label: 'Title', type: 'text', value: 'Contact Us' },
+                        { label: 'Button Text', type: 'text', value: 'Send Message' }
+                    ],
+                    'footer': [
+                        { label: 'Background Color', type: 'color', value: '#1F2937' },
+                        { label: 'Copyright Text', type: 'text', value: '© 2023 Your Company. All rights reserved.' }
+                    ]
+                };
+                return properties[type] || [
+                    { label: 'Content', type: 'textarea', value: 'Custom component content' }
+                ];
+            }
+
+            // ========================
+            // STATE MANAGEMENT
+            // ========================
+
+            function saveState() {
+                const state = Array.from(canvas.children).map(child => {
+                    return {
+                        type: child.dataset.type,
+                        html: child.innerHTML,
+                        styles: child.style.cssText
+                    };
+                });
+                
+                // Push to history stack
+                historyStack = historyStack.slice(0, historyPointer + 1);
+                historyStack.push(JSON.stringify(state));
+                historyPointer = historyStack.length - 1;
+                
+                currentState = state;
+                updatePreview();
+            }
+
+            function undo() {
+                if (historyPointer > 0) {
+                    historyPointer--;
+                    loadState(historyStack[historyPointer]);
+                }
+            }
+
+            function redo() {
+                if (historyPointer < historyStack.length - 1) {
+                    historyPointer++;
+                    loadState(historyStack[historyPointer]);
+                }
+            }
+
+            function loadState(stateJSON) {
+                const state = JSON.parse(stateJSON);
+                canvas.innerHTML = '';
+                
+                if (state.length === 0) {
+                    emptyState = document.createElement('div');
+                    emptyState.className = 'component-placeholder';
+                    emptyState.id = 'empty-state';
+                    emptyState.textContent = 'Drag components here to start building';
+                    canvas.appendChild(emptyState);
+                    return;
+                }
+                
+                state.forEach(comp => {
+                    const div = document.createElement('div');
+                    div.className = 'dropped-component bg-white p-4 rounded-lg border border-gray-200 shadow-sm relative group';
+                    div.dataset.type = comp.type;
+                    div.innerHTML = comp.html;
+                    div.style.cssText = comp.styles;
+                    canvas.appendChild(div);
+                });
+                
+                setupResizableComponents();
+                updatePreview();
+            }
+
+            // ========================
+            // PREVIEW FUNCTIONALITY
+            // ========================
+
+            function updatePreview() {
+                previewContent.innerHTML = '';
+                const previewClone = canvas.cloneNode(true);
+                
+                // Remove edit controls from preview
+                previewClone.querySelectorAll('.absolute').forEach(el => el.remove());
+                
+                previewContent.appendChild(previewClone);
+            }
+
+            // ========================
+            // AI & TEMPLATE FEATURES
+            // ========================
+
+            function applyAILayout(layoutType) {
+                const layouts = {
+                    portfolio: ["hero", "features", "testimonials", "contact"],
+                    business: ["navbar", "hero", "features", "testimonials", "footer"],
+                    ecommerce: ["navbar", "hero", "features", "contact", "footer"]
+                };
+                
+                canvas.innerHTML = '';
+                layouts[layoutType].forEach(type => addComponentToCanvas(type));
+                saveState();
+            }
+
+            function applyTemplate(templateType) {
+                const templates = {
+                    restaurant: [
+                        { type: "hero", data: { title: "Welcome to Our Restaurant", subtitle: "Delicious food served daily" }},
+                        { type: "features", data: { title: "Our Menu" }}
+                    ],
+                    photographer: [
+                        { type: "hero", data: { title: "Capturing Life's Moments" }},
+                        { type: "features", data: { title: "Portfolio" }}
+                    ]
+                };
+                
+                canvas.innerHTML = '';
+                templates[templateType].forEach(comp => addComponentToCanvas(comp.type));
+                saveState();
+            }
+
+            // ========================
+            // EVENT LISTENERS
+            // ========================
+
+            function setupEventListeners() {
+                // Undo/Redo
+                document.getElementById('undo-btn').addEventListener('click', undo);
+                document.getElementById('redo-btn').addEventListener('click', redo);
+                
+                // Save version
+                document.getElementById('save-version').addEventListener('click', saveState);
+                
+                // Export options
+                document.getElementById('export-options').addEventListener('change', function() {
+                    if (this.value) {
+                        alert(`Exporting as ${this.value} would be implemented in a production app`);
+                        this.value = '';
+                    }
+                });
+                
+                // AI Layout
+                document.getElementById('apply-layout').addEventListener('click', () => {
+                    const layoutType = document.getElementById('layout-type').value;
+                    if (layoutType) applyAILayout(layoutType);
+                });
+                
+                // Templates
+                document.getElementById('apply-template').addEventListener('click', () => {
+                    const templateType = document.getElementById('template-type').value;
+                    if (templateType) applyTemplate(templateType);
+                });
+                
+                // Custom Components
+                document.getElementById('add-custom-component').addEventListener('click', () => {
+                    const name = document.getElementById('component-name').value.trim();
+                    const html = document.getElementById('component-html').value.trim();
+                    
+                    if (!name || !html) {
+                        alert('Please enter both a name and HTML for your component');
+                        return;
+                    }
+                    
+                    const newComponent = document.createElement('div');
+                    newComponent.className = 'component-item p-3 bg-yellow-50 rounded border border-yellow-200 cursor-move hover:bg-yellow-100 flex items-center gap-2 mb-2';
+                    newComponent.draggable = true;
+                    newComponent.dataset.type = 'custom-' + Date.now();
+                    newComponent.dataset.html = html;
+                    
+                    newComponent.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        <span>${name}</span>
+                    `;
+                    
+                    newComponent.addEventListener('dragstart', function(e) {
+                        e.dataTransfer.setData('text/plain', this.dataset.type);
+                        e.dataTransfer.setData('text/html', this.dataset.html);
+                        e.dataTransfer.effectAllowed = 'copy';
+                    });
+                    
+                    componentsList.appendChild(newComponent);
+                    
+                    // Clear inputs
+                    document.getElementById('component-name').value = '';
+                    document.getElementById('component-html').value = '';
+                    
+                    alert('Custom component added! Drag it to the canvas to use it.');
+                });
+                
+                // Theme Editor
+                document.getElementById('apply-theme').addEventListener('click', () => {
+                    const primaryColor = document.getElementById('primary-color').value;
+                    const fontFamily = document.getElementById('font-family').value;
+                    
+                    // Apply to all components
+                    document.querySelectorAll('.dropped-component').forEach(comp => {
+                        comp.style.setProperty('--primary-color', primaryColor);
+                        comp.style.fontFamily = fontFamily;
+                    });
+                    
+                    saveState();
+                });
+                
+                // Accessibility fixes
+                document.getElementById('fix-a11y').addEventListener('click', () => {
+                    alert('Accessibility issues would be automatically fixed in a production app');
+                    document.getElementById('a11y-score').textContent = '95';
+                    document.getElementById('a11y-issues').innerHTML = '<li>All issues resolved</li>';
+                });
+                
+                // Tutorial
+                document.getElementById('start-tour').addEventListener('click', () => {
+                    tutorialModal.classList.remove('hidden');
+                });
+                
+                document.getElementById('close-tutorial').addEventListener('click', () => {
+                    tutorialModal.classList.add('hidden');
+                });
+                
+                // Preview modal
+                document.getElementById('close-preview').addEventListener('click', () => {
+                    previewModal.classList.add('hidden');
+                });
+                
+                // Preview device buttons
+                document.querySelectorAll('[data-device]').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const device = this.dataset.device;
+                        const preview = document.getElementById('preview-content');
+                        preview.className = 'mx-auto';
+                        
+                        if (device === 'tablet') {
+                            preview.style.maxWidth = '768px';
+                        } else if (device === 'mobile') {
+                            preview.style.maxWidth = '375px';
+                        } else {
+                            preview.style.maxWidth = '100%';
+                        }
+                    });
+                });
+            }
+
+            function setupKeyboardShortcuts() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey && e.key === 'z') {
+                        e.preventDefault();
+                        undo();
+                    }
+                    if (e.ctrlKey && e.key === 'y') {
+                        e.preventDefault();
+                        redo();
+                    }
+                });
+            }
+
+            function setupTabs() {
+                document.querySelectorAll('.tab-button').forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        // Remove active class from all
+                        document.querySelectorAll('.tab-button').forEach(el => {
+                            el.classList.remove('active');
+                        });
+                        document.querySelectorAll('.tab-content').forEach(el => {
+                            el.classList.add('hidden');
+                        });
+                        
+                        // Add to clicked tab
+                        tab.classList.add('active');
+                        const tabId = tab.dataset.tab + '-panel';
+                        document.getElementById(tabId).classList.remove('hidden');
+                    });
+                });
+            }
+
+            function startTutorial() {
+                setTimeout(() => {
+                    tutorialModal.classList.remove('hidden');
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>

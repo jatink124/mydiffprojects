@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Website Builder</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #left-panel {
+            min-width: 300px;
+            max-width: 300px;
+            background-color: #ffffff;
+            padding: 1rem;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        #right-panel {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #e2e8f0;
+            overflow: hidden;
+        }
+        #canvas-wrapper {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            border: 2px dashed #cbd5e1;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+            position: relative;
+        }
+        .component-card, .template-card {
+            cursor: grab;
+            transition: transform 0.1s ease-in-out;
+        }
+        .component-card:active, .template-card:active {
+            cursor: grabbing;
+            transform: scale(0.98);
+        }
+        .component-card:hover, .template-card:hover {
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Basic styling for contenteditable elements */
+        [contenteditable="true"] {
+            outline: 2px solid #3b82f6;
+            border-radius: 0.375rem;
+            padding: 0.25rem 0.5rem;
+            transition: all 0.1s ease-in-out;
+            min-width: 50px;
+            display: inline-block;
+        }
+        [contenteditable="true"]:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        [contenteditable="true"]:focus {
+            background-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+        .active-component {
+            box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.5);
+            position: relative;
+        }
+        #editor-toolbar {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #334155;
+            color: #ffffff;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: none;
+            z-index: 10;
+        }
+        #editor-toolbar button {
+            background-color: #4f46e5;
+            color: white;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
+            transition: background-color 0.2s;
+        }
+        #editor-toolbar button:hover {
+            background-color: #4338ca;
+        }
+        #editor-toolbar input[type="color"] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            border: none;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            border-radius: 0.375rem;
+            overflow: hidden;
+            padding: 0;
+            background-color: transparent;
+        }
+        #editor-toolbar input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        #editor-toolbar input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 0.375rem;
+        }
+        #editor-toolbar input[type="color"]::-moz-color-swatch-wrapper {
+            padding: 0;
+        }
+        #editor-toolbar input[type="color"]::-moz-color-swatch {
+            border: none;
+            border-radius: 0.375rem;
+        }
+
+        /* New styles for advanced features */
+        .resize-handle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #3b82f6;
+            border-radius: 50%;
+            z-index: 20;
+            cursor: nwse-resize;
+        }
+        .resize-handle.bottom-right {
+            right: -5px;
+            bottom: -5px;
+        }
+        .resize-handle.bottom-left {
+            left: -5px;
+            bottom: -5px;
+        }
+        .resize-handle.top-right {
+            right: -5px;
+            top: -5px;
+        }
+        .resize-handle.top-left {
+            left: -5px;
+            top: -5px;
+        }
+        .component-actions {
+            position: absolute;
+            top: -25px;
+            right: 0;
+            display: flex;
+            gap: 2px;
+            background-color: #334155;
+            border-radius: 4px;
+            padding: 2px;
+            z-index: 5;
+        }
+        .component-actions button {
+            background-color: transparent;
+            color: white;
+            border: none;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+        .component-actions button:hover {
+            background-color: #4f46e5;
+        }
+        #preview-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        #preview-content {
+            background-color: white;
+            width: 90%;
+            height: 90%;
+            border-radius: 8px;
+            overflow: auto;
+            position: relative;
+        }
+        #close-preview {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1001;
+        }
+        #undo-redo-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            gap: 5px;
+            z-index: 10;
+        }
+        #undo-redo-container button {
+            background-color: #334155;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        #undo-redo-container button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        #save-load-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+            z-index: 10;
+        }
+        #save-load-container button {
+            background-color: #334155;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        #responsive-tools {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 5px;
+            background-color: #334155;
+            padding: 5px;
+            border-radius: 4px;
+            z-index: 10;
+        }
+        #responsive-tools button {
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        #responsive-tools button.active {
+            background-color: #4338ca;
+        }
+        .mobile-frame {
+            border: 20px solid #1a1a1a;
+            border-radius: 30px;
+            width: 375px;
+            height: 667px;
+            overflow: auto;
+            background-color: white;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+        .tablet-frame {
+            border: 20px solid #1a1a1a;
+            border-radius: 20px;
+            width: 768px;
+            height: 1024px;
+            overflow: auto;
+            background-color: white;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+        #image-upload-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        #image-upload-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 400px;
+            max-width: 90%;
+        }
+        #image-upload-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        #image-gallery {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .gallery-image {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid transparent;
+            border-radius: 4px;
+        }
+        .gallery-image:hover {
+            border-color: #3b82f6;
+        }
+        #image-search {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        #image-upload-btn {
+            margin-top: 10px;
+            width: 100%;
+            padding: 8px;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #image-upload-btn:hover {
+            background-color: #2563eb;
+        }
+        #form-builder-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        #form-builder-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+        }
+        #form-builder-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .form-field-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .form-field-item:hover {
+            background-color: #f5f5f5;
+        }
+        .form-field-actions {
+            display: flex;
+            gap: 5px;
+        }
+        #form-field-list {
+            margin: 15px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        #form-field-types {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .form-field-type {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .form-field-type:hover {
+            background-color: #f0f0f0;
+        }
+        #form-settings {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        #form-builder-preview {
+            margin-top: 15px;
+            padding: 15px;
+            border: 1px dashed #ccc;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        #code-editor-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        #code-editor-content {
+            background-color: white;
+            width: 80%;
+            height: 80%;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+        #code-editor-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1001;
+        }
+        #code-editor-tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+        }
+        .code-editor-tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-right: 1px solid #ddd;
+        }
+        .code-editor-tab.active {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        #code-editor-area {
+            flex-grow: 1;
+            padding: 10px;
+            font-family: monospace;
+            white-space: pre;
+            overflow: auto;
+        }
+        #code-editor-actions {
+            padding: 10px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            border-top: 1px solid #ddd;
+        }
+        #code-editor-actions button {
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #code-editor-save {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+        }
+        #code-editor-save:hover {
+            background-color: #2563eb;
+        }
+        #code-editor-cancel {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+        }
+        #code-editor-cancel:hover {
+            background-color: #e5e5e5;
+        }
+        #history-states {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #334155;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 100;
+        }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 4px;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-inter">
+
+    <div id="left-panel" class="flex flex-col bg-white p-4 shadow-lg rounded-tr-lg rounded-br-lg">
+        <h2 class="text-xl font-semibold mb-4 text-gray-800">Components</h2>
+
+        <div id="components-library" class="grid grid-cols-1 gap-4 mb-6">
+            <!-- Pre-defined Components -->
+            <div class="component-card p-4 bg-blue-100 rounded-lg shadow-sm text-blue-800 text-center text-sm font-medium hover:bg-blue-200" draggable="true" data-component-type="navbar">Navbar</div>
+            <div class="component-card p-4 bg-purple-100 rounded-lg shadow-sm text-purple-800 text-center text-sm font-medium hover:bg-purple-200" draggable="true" data-component-type="hero">Hero Section</div>
+            <div class="component-card p-4 bg-green-100 rounded-lg shadow-sm text-green-800 text-center text-sm font-medium hover:bg-green-200" draggable="true" data-component-type="services">Services Section</div>
+            <div class="component-card p-4 bg-yellow-100 rounded-lg shadow-sm text-yellow-800 text-center text-sm font-medium hover:bg-yellow-200" draggable="true" data-component-type="testimonials">Testimonials Section</div>
+            <div class="component-card p-4 bg-red-100 rounded-lg shadow-sm text-red-800 text-center text-sm font-medium hover:bg-red-200" draggable="true" data-component-type="footer">Footer Section</div>
+            <div class="component-card p-4 bg-indigo-100 rounded-lg shadow-sm text-indigo-800 text-center text-sm font-medium hover:bg-indigo-200" draggable="true" data-component-type="image-gallery">Image Gallery</div>
+            <div class="component-card p-4 bg-pink-100 rounded-lg shadow-sm text-pink-800 text-center text-sm font-medium hover:bg-pink-200" draggable="true" data-component-type="contact-form">Contact Form</div>
+        </div>
+
+        <h2 class="text-xl font-semibold mb-4 text-gray-800">Full Templates</h2>
+        <div id="templates-library" class="grid grid-cols-1 gap-4 mb-6">
+            <!-- Pre-defined Templates -->
+            <div class="template-card p-4 bg-indigo-100 rounded-lg shadow-sm text-indigo-800 text-center text-sm font-medium hover:bg-indigo-200" draggable="true" data-template-type="full-page-1">Navbar + Hero + Footer</div>
+            <div class="template-card p-4 bg-pink-100 rounded-lg shadow-sm text-pink-800 text-center text-sm font-medium hover:bg-pink-200" draggable="true" data-template-type="full-page-2">Hero + Services + Testimonials</div>
+            <div class="template-card p-4 bg-teal-100 rounded-lg shadow-sm text-teal-800 text-center text-sm font-medium hover:bg-teal-200" draggable="true" data-template-type="full-page-3">Complete Business Page</div>
+            <div class="template-card p-4 bg-orange-100 rounded-lg shadow-sm text-orange-800 text-center text-sm font-medium hover:bg-orange-200" draggable="true" data-template-type="full-page-4">Portfolio Template</div>
+        </div>
+
+        <div class="mt-auto pt-6 border-t border-gray-200">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Add Your Own Component/Template</h2>
+            <textarea id="custom-code-input" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 h-32 mb-3 resize-y" placeholder="Paste your HTML code here..."></textarea>
+            <button id="add-custom-component-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition duration-200 shadow-md">Add Custom Component</button>
+            <button id="open-code-editor-btn" class="w-full bg-purple-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-purple-700 transition duration-200 shadow-md mt-2">Advanced Code Editor</button>
+        </div>
+    </div>
+
+    <div id="right-panel" class="flex flex-col bg-gray-200 flex-grow rounded-tl-lg rounded-bl-lg">
+        <div class="p-4 bg-gray-800 text-white text-center text-lg font-bold rounded-tl-lg flex justify-between items-center">
+            <span>Website Canvas</span>
+            <div class="flex gap-2">
+                <button id="preview-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded text-sm">Preview</button>
+                <button id="export-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded text-sm">Export</button>
+            </div>
+        </div>
+        
+        <!-- Undo/Redo buttons -->
+        <div id="undo-redo-container">
+            <button id="undo-btn" disabled><i class="fas fa-undo"></i></button>
+            <button id="redo-btn" disabled><i class="fas fa-redo"></i></button>
+        </div>
+        
+        <!-- Save/Load buttons -->
+        <div id="save-load-container">
+            <button id="save-btn"><i class="fas fa-save"></i> Save</button>
+            <button id="load-btn"><i class="fas fa-folder-open"></i> Load</button>
+        </div>
+        
+        <div id="editor-toolbar" class="flex flex-col gap-2">
+            <span class="font-bold">Edit Element</span>
+            <div class="flex gap-2">
+                <input type="color" id="background-color-picker" title="Background Color">
+                <input type="color" id="text-color-picker" title="Text Color">
+            </div>
+            <div class="flex gap-2">
+                <button id="bold-btn" class="font-bold">B</button>
+                <button id="italic-btn" class="italic">I</button>
+                <button id="underline-btn" class="underline">U</button>
+            </div>
+            <select id="font-family-select" class="text-sm p-1 rounded border">
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="'Times New Roman', serif">Times New Roman</option>
+                <option value="'Courier New', monospace">Courier New</option>
+                <option value="'Georgia', serif">Georgia</option>
+                <option value="'Inter', sans-serif" selected>Inter</option>
+            </select>
+            <select id="font-size-select" class="text-sm p-1 rounded border">
+                <option value="12px">Small</option>
+                <option value="16px" selected>Medium</option>
+                <option value="20px">Large</option>
+                <option value="24px">X-Large</option>
+            </select>
+            <button id="add-image-btn" class="bg-green-500 hover:bg-green-600">Add Image</button>
+            <button id="remove-component-btn" class="bg-red-500 hover:bg-red-600">Remove</button>
+            <button id="duplicate-component-btn" class="bg-yellow-500 hover:bg-yellow-600">Duplicate</button>
+        </div>
+        
+        <!-- Responsive Tools -->
+        <div id="responsive-tools">
+            <button id="desktop-view-btn" class="active"><i class="fas fa-desktop"></i></button>
+            <button id="tablet-view-btn"><i class="fas fa-tablet-alt"></i></button>
+            <button id="mobile-view-btn"><i class="fas fa-mobile-alt"></i></button>
+        </div>
+        
+        <div id="canvas-wrapper" class="relative flex-grow bg-white m-4 rounded-lg shadow-inner overflow-y-auto">
+            <div id="canvas" class="min-h-full w-full flex flex-col items-center gap-4 p-4">
+                <!-- Dropped components will appear here -->
+                <div class="text-gray-400 text-xl font-medium p-8 border border-dashed border-gray-300 rounded-lg bg-gray-50">
+                    Drag and drop components or templates here!
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Preview Modal -->
+    <div id="preview-modal">
+        <div id="preview-content"></div>
+        <button id="close-preview"><i class="fas fa-times"></i></button>
+    </div>
+    
+    <!-- Image Upload Modal -->
+    <div id="image-upload-modal">
+        <div id="image-upload-content">
+            <h3 class="text-lg font-semibold mb-4">Add Image</h3>
+            <input type="text" id="image-search" placeholder="Search for images...">
+            <div id="image-gallery">
+                <!-- Images will be added here dynamically -->
+            </div>
+            <input type="file" id="image-upload-btn" accept="image/*">
+            <button id="insert-image-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded mt-2">Insert Selected Image</button>
+        </div>
+        <button id="image-upload-close"><i class="fas fa-times"></i></button>
+    </div>
+    
+    <!-- Form Builder Modal -->
+    <div id="form-builder-modal">
+        <div id="form-builder-content">
+            <h3 class="text-lg font-semibold mb-4">Form Builder</h3>
+            <div id="form-field-types">
+                <div class="form-field-type" data-type="text"><i class="fas fa-font"></i> Text</div>
+                <div class="form-field-type" data-type="email"><i class="fas fa-envelope"></i> Email</div>
+                <div class="form-field-type" data-type="textarea"><i class="fas fa-align-left"></i> Textarea</div>
+                <div class="form-field-type" data-type="select"><i class="fas fa-caret-down"></i> Dropdown</div>
+                <div class="form-field-type" data-type="checkbox"><i class="fas fa-check-square"></i> Checkbox</div>
+                <div class="form-field-type" data-type="radio"><i class="fas fa-dot-circle"></i> Radio</div>
+                <div class="form-field-type" data-type="file"><i class="fas fa-file-upload"></i> File</div>
+                <div class="form-field-type" data-type="button"><i class="fas fa-hand-pointer"></i> Button</div>
+                <div class="form-field-type" data-type="submit"><i class="fas fa-paper-plane"></i> Submit</div>
+            </div>
+            <div id="form-field-list">
+                <!-- Form fields will be added here -->
+            </div>
+            <div id="form-settings">
+                <h4 class="font-semibold mb-2">Form Settings</h4>
+                <div class="mb-2">
+                    <label class="block text-sm">Form Action:</label>
+                    <input type="text" id="form-action" class="w-full p-2 border rounded" placeholder="URL to submit form">
+                </div>
+                <div class="mb-2">
+                    <label class="block text-sm">Method:</label>
+                    <select id="form-method" class="w-full p-2 border rounded">
+                        <option value="GET">GET</option>
+                        <option value="POST" selected>POST</option>
+                    </select>
+                </div>
+            </div>
+            <div id="form-builder-preview">
+                <h4 class="font-semibold mb-2">Preview</h4>
+                <div id="form-preview">
+                    <!-- Form preview will be shown here -->
+                </div>
+            </div>
+            <button id="insert-form-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded mt-4">Insert Form</button>
+        </div>
+        <button id="form-builder-close"><i class="fas fa-times"></i></button>
+    </div>
+    
+    <!-- Code Editor Modal -->
+    <div id="code-editor-modal">
+        <div id="code-editor-content">
+            <div id="code-editor-tabs">
+                <div class="code-editor-tab active" data-tab="html">HTML</div>
+                <div class="code-editor-tab" data-tab="css">CSS</div>
+                <div class="code-editor-tab" data-tab="js">JavaScript</div>
+            </div>
+            <pre id="code-editor-area" contenteditable="true"></pre>
+            <div id="code-editor-actions">
+                <button id="code-editor-cancel">Cancel</button>
+                <button id="code-editor-save">Save Changes</button>
+            </div>
+        </div>
+        <button id="code-editor-close"><i class="fas fa-times"></i></button>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+    
+    <!-- History States Indicator -->
+    <div id="history-states">History: 0/0</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const customCodeInput = document.getElementById('custom-code-input');
+        const addCustomComponentBtn = document.getElementById('add-custom-component-btn');
+        const componentsLibrary = document.getElementById('components-library');
+        const templatesLibrary = document.getElementById('templates-library');
+        const editorToolbar = document.getElementById('editor-toolbar');
+        const backgroundColorPicker = document.getElementById('background-color-picker');
+        const textColorPicker = document.getElementById('text-color-picker');
+        const removeComponentBtn = document.getElementById('remove-component-btn');
+        const duplicateComponentBtn = document.getElementById('duplicate-component-btn');
+        const previewBtn = document.getElementById('preview-btn');
+        const previewModal = document.getElementById('preview-modal');
+        const previewContent = document.getElementById('preview-content');
+        const closePreview = document.getElementById('close-preview');
+        const exportBtn = document.getElementById('export-btn');
+        const undoBtn = document.getElementById('undo-btn');
+        const redoBtn = document.getElementById('redo-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const loadBtn = document.getElementById('load-btn');
+        const desktopViewBtn = document.getElementById('desktop-view-btn');
+        const tabletViewBtn = document.getElementById('tablet-view-btn');
+        const mobileViewBtn = document.getElementById('mobile-view-btn');
+        const canvasWrapper = document.getElementById('canvas-wrapper');
+        const addImageBtn = document.getElementById('add-image-btn');
+        const imageUploadModal = document.getElementById('image-upload-modal');
+        const imageUploadClose = document.getElementById('image-upload-close');
+        const imageGallery = document.getElementById('image-gallery');
+        const insertImageBtn = document.getElementById('insert-image-btn');
+        const openCodeEditorBtn = document.getElementById('open-code-editor-btn');
+        const codeEditorModal = document.getElementById('code-editor-modal');
+        const codeEditorClose = document.getElementById('code-editor-close');
+        const codeEditorTabs = document.getElementById('code-editor-tabs');
+        const codeEditorArea = document.getElementById('code-editor-area');
+        const codeEditorSave = document.getElementById('code-editor-save');
+        const codeEditorCancel = document.getElementById('code-editor-cancel');
+        const toast = document.getElementById('toast');
+        const historyStates = document.getElementById('history-states');
+        const boldBtn = document.getElementById('bold-btn');
+        const italicBtn = document.getElementById('italic-btn');
+        const underlineBtn = document.getElementById('underline-btn');
+        const fontFamilySelect = document.getElementById('font-family-select');
+        const fontSizeSelect = document.getElementById('font-size-select');
+
+        let draggedComponentHTML = null;
+        let draggedComponentType = null;
+        let activeEditableElement = null;
+        let activeDroppedComponent = null;
+        let history = [];
+        let historyIndex = -1;
+        let selectedImage = null;
+        let currentView = 'desktop'; // 'desktop', 'tablet', or 'mobile'
+        
+        // Feature 1: Undo/Redo functionality
+        function saveHistory() {
+            // If we're not at the end of history, remove future states
+            if (historyIndex < history.length - 1) {
+                history = history.slice(0, historyIndex + 1);
+            }
+            
+            // Save current canvas state
+            history.push(canvas.innerHTML);
+            historyIndex++;
+            
+            // Limit history to 50 states
+            if (history.length > 50) {
+                history.shift();
+                historyIndex--;
+            }
+            
+            updateHistoryButtons();
+            updateHistoryStates();
+        }
+        
+        function updateHistoryButtons() {
+            undoBtn.disabled = historyIndex <= 0;
+            redoBtn.disabled = historyIndex >= history.length - 1;
+        }
+        
+        function updateHistoryStates() {
+            historyStates.textContent = `History: ${historyIndex + 1}/${history.length}`;
+        }
+        
+        undoBtn.addEventListener('click', () => {
+            if (historyIndex > 0) {
+                historyIndex--;
+                canvas.innerHTML = history[historyIndex];
+                updateHistoryButtons();
+                updateHistoryStates();
+                showToast('Undo successful');
+            }
+        });
+        
+        redoBtn.addEventListener('click', () => {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                canvas.innerHTML = history[historyIndex];
+                updateHistoryButtons();
+                updateHistoryStates();
+                showToast('Redo successful');
+            }
+        });
+        
+        // Feature 2: Save/Load projects
+        saveBtn.addEventListener('click', () => {
+            const projectData = {
+                canvasContent: canvas.innerHTML,
+                timestamp: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(projectData)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `website-builder-project-${new Date().getTime()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast('Project saved successfully');
+        });
+        
+        loadBtn.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = event => {
+                    try {
+                        const projectData = JSON.parse(event.target.result);
+                        canvas.innerHTML = projectData.canvasContent;
+                        
+                        // Reattach event listeners to all components
+                        document.querySelectorAll('.dropped-component').forEach(component => {
+                            addEditingListeners(component);
+                        });
+                        
+                        saveHistory();
+                        showToast('Project loaded successfully');
+                    } catch (error) {
+                        showToast('Error loading project', true);
+                        console.error('Error loading project:', error);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        });
+        
+        // Feature 3: Responsive preview modes
+        function setViewMode(mode) {
+            currentView = mode;
+            
+            // Update button states
+            desktopViewBtn.classList.remove('active');
+            tabletViewBtn.classList.remove('active');
+            mobileViewBtn.classList.remove('active');
+            
+            // Reset canvas wrapper styles
+            canvasWrapper.style.width = '';
+            canvasWrapper.style.height = '';
+            canvasWrapper.style.padding = '';
+            canvasWrapper.style.overflow = '';
+            canvasWrapper.style.margin = '1rem';
+            
+            // Remove any existing frame classes
+            canvasWrapper.classList.remove('mobile-frame', 'tablet-frame');
+            
+            switch (mode) {
+                case 'tablet':
+                    tabletViewBtn.classList.add('active');
+                    canvasWrapper.classList.add('tablet-frame');
+                    canvasWrapper.style.margin = 'auto';
+                    break;
+                case 'mobile':
+                    mobileViewBtn.classList.add('active');
+                    canvasWrapper.classList.add('mobile-frame');
+                    canvasWrapper.style.margin = 'auto';
+                    break;
+                default: // desktop
+                    desktopViewBtn.classList.add('active');
+                    break;
+            }
+        }
+        
+        desktopViewBtn.addEventListener('click', () => setViewMode('desktop'));
+        tabletViewBtn.addEventListener('click', () => setViewMode('tablet'));
+        mobileViewBtn.addEventListener('click', () => setViewMode('mobile'));
+        
+        // Feature 4: Image upload and gallery
+        function populateImageGallery() {
+            // Sample images (in a real app, these would come from a server or user uploads)
+            const sampleImages = [
+                { url: 'https://source.unsplash.com/random/300x200?nature', alt: 'Nature' },
+                { url: 'https://source.unsplash.com/random/300x200?city', alt: 'City' },
+                { url: 'https://source.unsplash.com/random/300x200?people', alt: 'People' },
+                { url: 'https://source.unsplash.com/random/300x200?technology', alt: 'Technology' },
+                { url: 'https://source.unsplash.com/random/300x200?food', alt: 'Food' },
+                { url: 'https://source.unsplash.com/random/300x200?animal', alt: 'Animal' }
+            ];
+            
+            imageGallery.innerHTML = '';
+            sampleImages.forEach(img => {
+                const imgElement = document.createElement('img');
+                imgElement.src = img.url;
+                imgElement.alt = img.alt;
+                imgElement.className = 'gallery-image';
+                imgElement.dataset.url = img.url;
+                imgElement.addEventListener('click', () => {
+                    // Remove selection from all images
+                    document.querySelectorAll('.gallery-image').forEach(img => {
+                        img.classList.remove('border-blue-500');
+                    });
+                    // Select clicked image
+                    imgElement.classList.add('border-blue-500');
+                    selectedImage = img.url;
+                });
+                imageGallery.appendChild(imgElement);
+            });
+        }
+        
+        addImageBtn.addEventListener('click', () => {
+            populateImageGallery();
+            imageUploadModal.style.display = 'flex';
+            selectedImage = null;
+        });
+        
+        imageUploadClose.addEventListener('click', () => {
+            imageUploadModal.style.display = 'none';
+        });
+        
+        insertImageBtn.addEventListener('click', () => {
+            if (selectedImage) {
+                if (activeEditableElement) {
+                    // Replace editable element with image
+                    const img = document.createElement('img');
+                    img.src = selectedImage;
+                    img.className = 'max-w-full h-auto';
+                    activeEditableElement.parentNode.replaceChild(img, activeEditableElement);
+                    activeEditableElement = null;
+                } else if (activeDroppedComponent) {
+                    // Add image to the active component
+                    const img = document.createElement('img');
+                    img.src = selectedImage;
+                    img.className = 'max-w-full h-auto my-2';
+                    activeDroppedComponent.appendChild(img);
+                }
+                saveHistory();
+                imageUploadModal.style.display = 'none';
+                showToast('Image added successfully');
+            } else {
+                showToast('Please select an image first', true);
+            }
+        });
+        
+        // Feature 5: Advanced text formatting
+        boldBtn.addEventListener('click', () => {
+            if (activeEditableElement) {
+                document.execCommand('bold', false, null);
+            }
+        });
+        
+        italicBtn.addEventListener('click', () => {
+            if (activeEditableElement) {
+                document.execCommand('italic', false, null);
+            }
+        });
+        
+        underlineBtn.addEventListener('click', () => {
+            if (activeEditableElement) {
+                document.execCommand('underline', false, null);
+            }
+        });
+        
+        fontFamilySelect.addEventListener('change', () => {
+            if (activeEditableElement) {
+                document.execCommand('fontName', false, fontFamilySelect.value);
+            }
+        });
+        
+        fontSizeSelect.addEventListener('change', () => {
+            if (activeEditableElement) {
+                document.execCommand('fontSize', false, '7'); // This uses the old HTML font size system
+                activeEditableElement.style.fontSize = fontSizeSelect.value; // So we override with modern CSS
+            }
+        });
+        
+        textColorPicker.addEventListener('input', (e) => {
+            if (activeEditableElement) {
+                document.execCommand('foreColor', false, e.target.value);
+            }
+        });
+        
+        // Feature 6: Preview functionality
+        previewBtn.addEventListener('click', () => {
+            previewContent.innerHTML = '';
+            
+            // Create a clone of the canvas to avoid affecting the original
+            const clone = canvas.cloneNode(true);
+            
+            // Remove any editing-related attributes and classes
+            clone.querySelectorAll('[contenteditable="true"]').forEach(el => {
+                el.removeAttribute('contenteditable');
+                el.classList.remove('active-component');
+            });
+            
+            // Remove resize handles and action buttons
+            clone.querySelectorAll('.resize-handle, .component-actions').forEach(el => el.remove());
+            
+            previewContent.appendChild(clone);
+            previewModal.style.display = 'flex';
+        });
+        
+        closePreview.addEventListener('click', () => {
+            previewModal.style.display = 'none';
+        });
+        
+        // Feature 7: Export functionality
+        exportBtn.addEventListener('click', () => {
+            // Create a complete HTML document with the canvas content
+            const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Website</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    ${canvas.innerHTML}
+</body>
+</html>
+            `;
+            
+            const blob = new Blob([html], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'my-website.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast('Website exported successfully');
+        });
+        
+        // Feature 8: Advanced Code Editor
+        openCodeEditorBtn.addEventListener('click', () => {
+            // Get current canvas HTML
+            codeEditorArea.textContent = canvas.innerHTML;
+            codeEditorModal.style.display = 'flex';
+        });
+        
+        codeEditorClose.addEventListener('click', () => {
+            codeEditorModal.style.display = 'none';
+        });
+        
+        codeEditorCancel.addEventListener('click', () => {
+            codeEditorModal.style.display = 'none';
+        });
+        
+        codeEditorSave.addEventListener('click', () => {
+            try {
+                // Create a temporary div to parse the HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = codeEditorArea.textContent;
+                
+                // If parsing was successful, update the canvas
+                canvas.innerHTML = codeEditorArea.textContent;
+                
+                // Reattach event listeners to all components
+                document.querySelectorAll('.dropped-component').forEach(component => {
+                    addEditingListeners(component);
+                });
+                
+                saveHistory();
+                codeEditorModal.style.display = 'none';
+                showToast('Changes saved successfully');
+            } catch (error) {
+                showToast('Error parsing HTML', true);
+                console.error('Error parsing HTML:', error);
+            }
+        });
+        
+        // Helper function to show toast notifications
+        function showToast(message, isError = false) {
+            toast.textContent = message;
+            toast.style.backgroundColor = isError ? '#ef4444' : '#10b981';
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Pre-defined HTML for components
+        const componentHTML = {
+            navbar: `
+                <nav class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4 flex justify-between items-center rounded-lg shadow-lg">
+                    <div class="text-2xl font-bold rounded-md px-2 py-1" contenteditable="true">MyBrand</div>
+                    <ul class="flex space-x-6">
+                        <li><a href="#" class="hover:text-blue-200 transition duration-200 rounded-md px-2 py-1" contenteditable="true">Home</a></li>
+                        <li><a href="#" class="hover:text-blue-200 transition duration-200 rounded-md px-2 py-1" contenteditable="true">About</a></li>
+                        <li><a href="#" class="hover:text-blue-200 transition duration-200 rounded-md px-2 py-1" contenteditable="true">Services</a></li>
+                        <li><a href="#" class="hover:text-blue-200 transition duration-200 rounded-md px-2 py-1" contenteditable="true">Contact</a></li>
+                    </ul>
+                </nav>
+            `,
+            hero: `
+                <section class="w-full bg-gray-900 text-white py-20 px-8 text-center rounded-lg shadow-lg">
+                    <h1 class="text-5xl font-extrabold mb-4 rounded-md px-2 py-1" contenteditable="true">Welcome to Our Amazing Website!</h1>
+                    <p class="text-xl mb-8 text-gray-300 rounded-md px-2 py-1" contenteditable="true">Discover innovative solutions for your business needs.</p>
+                    <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-300">
+                        <span contenteditable="true">Learn More</span>
+                    </button>
+                </section>
+            `,
+            services: `
+                <section class="w-full bg-white py-16 px-8 text-center rounded-lg shadow-lg">
+                    <h2 class="text-4xl font-bold text-gray-800 mb-12 rounded-md px-2 py-1" contenteditable="true">Our Services</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div class="p-6 bg-gray-100 rounded-lg shadow-md hover:shadow-xl transition duration-300">
+                            <h3 class="text-2xl font-semibold text-gray-800 mb-4 rounded-md px-2 py-1" contenteditable="true">Web Development</h3>
+                            <p class="text-gray-600 rounded-md px-2 py-1" contenteditable="true">Crafting responsive and high-performance websites for your business.</p>
+                        </div>
+                        <div class="p-6 bg-gray-100 rounded-lg shadow-md hover:shadow-xl transition duration-300">
+                            <h3 class="text-2xl font-semibold text-gray-800 mb-4 rounded-md px-2 py-1" contenteditable="true">Digital Marketing</h3>
+                            <p class="text-gray-600 rounded-md px-2 py-1" contenteditable="true">Boost your online presence with our comprehensive marketing strategies.</p>
+                        </div>
+                        <div class="p-6 bg-gray-100 rounded-lg shadow-md hover:shadow-xl transition duration-300">
+                            <h3 class="text-2xl font-semibold text-gray-800 mb-4 rounded-md px-2 py-1" contenteditable="true">UI/UX Design</h3>
+                            <p class="text-gray-600 rounded-md px-2 py-1" contenteditable="true">Creating intuitive and aesthetically pleasing user interfaces.</p>
+                        </div>
+                    </div>
+                </section>
+            `,
+            testimonials: `
+                <section class="w-full bg-gray-100 py-16 px-8 text-center rounded-lg shadow-lg">
+                    <h2 class="text-4xl font-bold text-gray-800 mb-12 rounded-md px-2 py-1" contenteditable="true">What Our Clients Say</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="bg-white p-8 rounded-lg shadow-md border-t-4 border-blue-500">
+                            <p class="text-gray-700 italic mb-4 rounded-md px-2 py-1" contenteditable="true">"Outstanding service! Our website has never looked better and traffic has doubled."</p>
+                            <p class="font-semibold text-gray-900 rounded-md px-2 py-1" contenteditable="true">- Jane Doe, CEO of Tech Innovations</p>
+                        </div>
+                        <div class="bg-white p-8 rounded-lg shadow-md border-t-4 border-purple-500">
+                            <p class="text-gray-700 italic mb-4 rounded-md px-2 py-1" contenteditable="true">"Professional and highly skilled team. They delivered beyond our expectations."</p>
+                            <p class="font-semibold text-gray-900 rounded-md px-2 py-1" contenteditable="true"> - John Smith, Founder of Creative Solutions</p>
+                        </div>
+                    </div>
+                </section>
+            `,
+            footer: `
+                <footer class="w-full bg-gray-800 text-white py-10 px-8 text-center rounded-lg shadow-lg">
+                    <div class="flex flex-col md:flex-row justify-center items-center gap-6 mb-6">
+                        <a href="#" class="hover:text-gray-300 transition duration-200 rounded-md px-2 py-1" contenteditable="true">Privacy Policy</a>
+                        <span class="hidden md:inline-block">|</span>
+                        <a href="#" class="hover:text-gray-300 transition duration-200 rounded-md px-2 py-1" contenteditable="true">Terms of Service</a>
+                        <span class="hidden md:inline-block">|</span>
+                        <a href="#" class="hover:text-gray-300 transition duration-200 rounded-md px-2 py-1" contenteditable="true">Sitemap</a>
+                    </div>
+                    <p class="text-gray-400 text-sm rounded-md px-2 py-1" contenteditable="true">&copy; 2025 My Website. All rights reserved.</p>
+                </footer>
+            `,
+            'image-gallery': `
+                <section class="w-full bg-white py-16 px-8 rounded-lg shadow-lg">
+                    <h2 class="text-4xl font-bold text-gray-800 mb-12 text-center rounded-md px-2 py-1" contenteditable="true">Image Gallery</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                        <div class="overflow-hidden rounded-lg shadow-md hover:shadow-xl transition duration-300">
+                            <img src="https://source.unsplash.com/random/600x400?nature" alt="Nature" class="w-full h-48 object-cover rounded-t-lg" contenteditable="true">
+                            <div class="p-4">
+                                <h3 class="text-xl font-semibold text-gray-800 mb-2 rounded-md px-2 py-1" contenteditable="true">Nature</h3>
+                                <p class="text-gray-600 rounded-md px-2 py-1" contenteditable="true">Beautiful nature photography</p>
+                            </div>
+                        </div>
+                        <div class="overflow-hidden rounded-lg shadow-md hover:shadow-xl transition duration-300">
+                            <img src="https://source.unsplash.com/random/600x400?city" alt="City" class="w-full h-48 object-cover rounded-t-lg" contenteditable="true">
+                            <div class="p-4">
+                                <h3 class="text-xl font-semibold text-gray-800 mb-2 rounded-md px-2 py-1" contenteditable="true">City</h3>
+                                <p class="text-gray-600 rounded-md px-2 py-1" contenteditable="true">Urban landscapes</p>
+                            </div>
+                        </div>
+                        <div class="overflow-hidden rounded-lg shadow-md hover:shadow-xl transition duration-300">
+                            <img src="https://source.unsplash.com/random/600x400?people" alt="People" class="w-full h-48 object-cover rounded-t-lg" contenteditable="true">
+                            <div class="p-4">
+                                <h3 class="text-xl font-semibold text-gray-800 mb-2 rounded-md px-2 py-1" contenteditable="true">People</h3>
+                                <p class="text-gray-600 rounded-md px-2 py-1" contenteditable="true">Portraits and lifestyle</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            `,
+            'contact-form': `
+                <section class="w-full bg-gray-100 py-16 px-8 rounded-lg shadow-lg">
+                    <h2 class="text-4xl font-bold text-gray-800 mb-8 text-center rounded-md px-2 py-1" contenteditable="true">Contact Us</h2>
+                    <form class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md">
+                        <div class="mb-6">
+                            <label class="block text-gray-700 font-medium mb-2 rounded-md px-2 py-1" contenteditable="true">Your Name</label>
+                            <input type="text" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter your name">
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-gray-700 font-medium mb-2 rounded-md px-2 py-1" contenteditable="true">Email Address</label>
+                            <input type="email" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter your email">
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-gray-700 font-medium mb-2 rounded-md px-2 py-1" contenteditable="true">Message</label>
+                            <textarea class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="5" placeholder="Your message here"></textarea>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition duration-200">
+                            <span contenteditable="true">Send Message</span>
+                        </button>
+                    </form>
+                </section>
+            `
+        };
+
+        // Pre-defined HTML for full templates
+        const templateHTML = {
+            'full-page-1': `
+                <div class="w-full flex flex-col gap-4">
+                    ${componentHTML.navbar}
+                    ${componentHTML.hero}
+                    ${componentHTML.footer}
+                </div>
+            `,
+            'full-page-2': `
+                <div class="w-full flex flex-col gap-4">
+                    ${componentHTML.hero}
+                    ${componentHTML.services}
+                    ${componentHTML.testimonials}
+                </div>
+            `,
+            'full-page-3': `
+                <div class="w-full flex flex-col gap-4">
+                    ${componentHTML.navbar}
+                    ${componentHTML.hero}
+                    ${componentHTML.services}
+                    ${componentHTML.testimonials}
+                    ${componentHTML['contact-form']}
+                    ${componentHTML.footer}
+                </div>
+            `,
+            'full-page-4': `
+                <div class="w-full flex flex-col gap-4">
+                    ${componentHTML.navbar}
+                    ${componentHTML.hero}
+                    ${componentHTML['image-gallery']}
+                    ${componentHTML['contact-form']}
+                    ${componentHTML.footer}
+                </div>
+            `
+        };
+
+        // --- Drag and Drop Handlers ---
+
+        document.querySelectorAll('.component-card, .template-card').forEach(card => {
+            card.addEventListener('dragstart', (e) => {
+                draggedComponentType = e.target.dataset.componentType || e.target.dataset.templateType;
+                draggedComponentHTML = componentHTML[draggedComponentType] || templateHTML[draggedComponentType];
+
+                if (!draggedComponentHTML) {
+                    // This is for custom components added later
+                    const customCard = e.target.closest('.custom-component-card');
+                    if (customCard) {
+                        draggedComponentHTML = customCard.dataset.html;
+                        draggedComponentType = 'custom';
+                    }
+                }
+
+                e.dataTransfer.setData('text/plain', draggedComponentType);
+                e.dataTransfer.effectAllowed = 'copy';
+            });
+        });
+
+        canvas.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+
+        canvas.addEventListener('drop', (e) => {
+            e.preventDefault();
+
+            if (draggedComponentHTML) {
+                // If the initial "Drag and drop..." text is present, remove it
+                const placeholder = canvas.querySelector('.text-gray-400.text-xl');
+                if (placeholder) {
+                    canvas.removeChild(placeholder);
+                }
+
+                // Create a temporary div to hold the new element(s)
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = draggedComponentHTML.trim();
+
+                // Get the first child to append
+                const newElement = tempDiv.firstElementChild;
+
+                if (newElement) {
+                    newElement.classList.add('w-full');
+                    newElement.classList.add('shadow-md', 'hover:shadow-lg', 'transition-all', 'duration-300');
+                    newElement.classList.add('dropped-component');
+                    newElement.classList.add('relative'); // For positioning resize handles
+
+                    canvas.appendChild(newElement);
+                    addEditingListeners(newElement);
+                    saveHistory();
+                }
+            }
+            draggedComponentHTML = null;
+            draggedComponentType = null;
+        });
+
+        // --- Editing Functionality ---
+
+        function addEditingListeners(element) {
+            // Add click listener to the entire dropped component to enable toolbar
+            element.addEventListener('click', (e) => {
+                // Prevent event from bubbling up and hiding the toolbar if clicked on a child editable element
+                e.stopPropagation();
+
+                // Remove active class from previously active component
+                if (activeDroppedComponent && activeDroppedComponent !== element) {
+                    activeDroppedComponent.classList.remove('active-component');
+                    // Remove resize handles from previous active component
+                    document.querySelectorAll('.resize-handle').forEach(handle => handle.remove());
+                }
+
+                // Set current component as active
+                activeDroppedComponent = element;
+                activeDroppedComponent.classList.add('active-component');
+
+                // Add resize handles
+                addResizeHandles(element);
+
+                // Update color picker with current background color
+                const computedStyle = window.getComputedStyle(element);
+                const bgColor = computedStyle.backgroundColor;
+                try {
+                    const hexColor = rgbToHex(bgColor);
+                    backgroundColorPicker.value = hexColor;
+                } catch (e) {
+                    console.error("Error converting RGB to Hex for background color:", e);
+                    backgroundColorPicker.value = "#ffffff";
+                }
+
+                // Update text color picker if there's text content
+                if (element.textContent.trim() !== '') {
+                    const textColor = computedStyle.color;
+                    try {
+                        const hexTextColor = rgbToHex(textColor);
+                        textColorPicker.value = hexTextColor;
+                    } catch (e) {
+                        console.error("Error converting RGB to Hex for text color:", e);
+                        textColorPicker.value = "#000000";
+                    }
+                }
+
+                // Show toolbar
+                editorToolbar.style.display = 'flex';
+                editorToolbar.style.opacity = '1';
+
+                // Hide toolbar when clicking outside the active component or toolbar
+                document.addEventListener('click', hideToolbarOnClickOutside);
+            });
+
+            // Make all child elements with contenteditable="true" directly editable
+            element.querySelectorAll('[contenteditable="true"]').forEach(editable => {
+                editable.addEventListener('focus', () => {
+                    activeEditableElement = editable;
+                });
+                editable.addEventListener('blur', () => {
+                    activeEditableElement = null;
+                });
+            });
+
+            // Re-execute scripts within the newly added element
+            element.querySelectorAll('script').forEach(oldScript => {
+                const newScript = document.createElement('script');
+                Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                newScript.textContent = oldScript.textContent;
+                oldScript.parentNode.replaceChild(newScript, oldScript);
+            });
+        }
+
+        function addResizeHandles(element) {
+            // Create resize handles
+            const handles = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+            
+            handles.forEach(position => {
+                const handle = document.createElement('div');
+                handle.className = `resize-handle ${position}`;
+                handle.dataset.position = position;
+                
+                // Position the handle
+                handle.style.position = 'absolute';
+                
+                element.appendChild(handle);
+                
+                // Add drag event for resizing
+                handle.addEventListener('mousedown', initResize);
+            });
+            
+            function initResize(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const position = this.dataset.position;
+                const element = this.parentNode;
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const startWidth = parseInt(document.defaultView.getComputedStyle(element).width, 10);
+                const startHeight = parseInt(document.defaultView.getComputedStyle(element).height, 10);
+                
+                function doResize(e) {
+                    if (position.includes('right')) {
+                        element.style.width = (startWidth + e.clientX - startX) + 'px';
+                    }
+                    if (position.includes('left')) {
+                        element.style.width = (startWidth - e.clientX + startX) + 'px';
+                    }
+                    if (position.includes('bottom')) {
+                        element.style.height = (startHeight + e.clientY - startY) + 'px';
+                    }
+                    if (position.includes('top')) {
+                        element.style.height = (startHeight - e.clientY + startY) + 'px';
+                    }
+                }
+                
+                function stopResize() {
+                    window.removeEventListener('mousemove', doResize);
+                    window.removeEventListener('mouseup', stopResize);
+                    saveHistory();
+                }
+                
+                window.addEventListener('mousemove', doResize);
+                window.addEventListener('mouseup', stopResize);
+            }
+        }
+
+        // Helper function to convert RGB to Hex
+        function rgbToHex(rgb) {
+            const rgbMatch = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+            if (!rgbMatch) return "#ffffff";
+
+            const toHex = (c) => {
+                const hex = parseInt(c).toString(16);
+                return hex.length === 1 ? "0" + hex : hex;
+            };
+
+            return "#" + toHex(rgbMatch[1]) + toHex(rgbMatch[2]) + toHex(rgbMatch[3]);
+        }
+
+        // Toolbar actions
+        backgroundColorPicker.addEventListener('input', (e) => {
+            if (activeDroppedComponent) {
+                activeDroppedComponent.style.backgroundColor = e.target.value;
+                saveHistory();
+            }
+        });
+        
+        textColorPicker.addEventListener('input', (e) => {
+            if (activeEditableElement) {
+                activeEditableElement.style.color = e.target.value;
+                saveHistory();
+            }
+        });
+
+        removeComponentBtn.addEventListener('click', () => {
+            if (activeDroppedComponent) {
+                // Confirm removal
+                const confirmationModal = document.createElement('div');
+                confirmationModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                confirmationModal.innerHTML = `
+                    <div class="bg-white p-8 rounded-lg shadow-xl flex flex-col items-center">
+                        <p class="text-lg font-semibold mb-6 text-gray-800">Are you sure you want to remove this component?</p>
+                        <div class="flex space-x-4">
+                            <button id="confirm-remove" class="bg-red-600 text-white py-2 px-6 rounded-lg hover:bg-red-700 transition duration-200">Yes, Remove</button>
+                            <button id="cancel-remove" class="bg-gray-300 text-gray-800 py-2 px-6 rounded-lg hover:bg-gray-400 transition duration-200">Cancel</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(confirmationModal);
+
+                document.getElementById('confirm-remove').addEventListener('click', () => {
+                    canvas.removeChild(activeDroppedComponent);
+                    activeDroppedComponent = null;
+                    editorToolbar.style.display = 'none';
+                    confirmationModal.remove();
+                    document.removeEventListener('click', hideToolbarOnClickOutside);
+                    saveHistory();
+                });
+
+                document.getElementById('cancel-remove').addEventListener('click', () => {
+                    confirmationModal.remove();
+                });
+            }
+        });
+        
+        duplicateComponentBtn.addEventListener('click', () => {
+            if (activeDroppedComponent) {
+                const clone = activeDroppedComponent.cloneNode(true);
+                canvas.appendChild(clone);
+                addEditingListeners(clone);
+                saveHistory();
+                showToast('Component duplicated');
+            }
+        });
+
+        // Function to hide toolbar when clicking outside of it or the active component
+        function hideToolbarOnClickOutside(e) {
+            if (activeDroppedComponent && !activeDroppedComponent.contains(e.target) && !editorToolbar.contains(e.target)) {
+                editorToolbar.style.display = 'none';
+                activeDroppedComponent.classList.remove('active-component');
+                // Remove resize handles
+                document.querySelectorAll('.resize-handle').forEach(handle => handle.remove());
+                activeDroppedComponent = null;
+                document.removeEventListener('click', hideToolbarOnClickOutside);
+            }
+        }
+
+        // Initially hide toolbar
+        editorToolbar.style.display = 'none';
+
+        // --- Add Custom Component Functionality ---
+
+        addCustomComponentBtn.addEventListener('click', () => {
+            const customHTML = customCodeInput.value.trim();
+            if (customHTML) {
+                // Create a new draggable card for the custom component
+                const newCard = document.createElement('div');
+                newCard.className = 'custom-component-card p-4 bg-gray-200 rounded-lg shadow-sm text-gray-800 text-center text-sm font-medium hover:bg-gray-300 cursor-grab transition duration-200';
+                newCard.draggable = true;
+                newCard.dataset.html = customHTML;
+                newCard.textContent = 'Custom Component';
+
+                // Add dragstart listener for this new card
+                newCard.addEventListener('dragstart', (e) => {
+                    draggedComponentHTML = e.target.dataset.html;
+                    draggedComponentType = 'custom';
+                    e.dataTransfer.setData('text/plain', draggedComponentType);
+                    e.dataTransfer.effectAllowed = 'copy';
+                });
+
+                componentsLibrary.appendChild(newCard);
+                customCodeInput.value = '';
+                showToast('Custom component added');
+            } else {
+                showToast('Please paste some HTML code first', true);
+            }
+        });
+
+        // Initialize listeners for existing component cards (for page load)
+        document.querySelectorAll('.component-card, .template-card').forEach(card => {
+            card.addEventListener('dragstart', (e) => {
+                draggedComponentType = e.target.dataset.componentType || e.target.dataset.templateType;
+                draggedComponentHTML = componentHTML[draggedComponentType] || templateHTML[draggedComponentType];
+                e.dataTransfer.setData('text/plain', draggedComponentType);
+                e.dataTransfer.effectAllowed = 'copy';
+            });
+        });
+
+        // Initial check for placeholder text, if canvas is empty, add it
+        if (canvas.children.length === 0) {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'text-gray-400 text-xl font-medium p-8 border border-dashed border-gray-300 rounded-lg bg-gray-50';
+            placeholder.textContent = 'Drag and drop components or templates here!';
+            canvas.appendChild(placeholder);
+        }
+        
+        // Initialize history
+        saveHistory();
+    </script>
+</body>
+</html>

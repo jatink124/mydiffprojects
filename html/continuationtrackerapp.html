@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Continuation Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#10B981',
+                        dark: '#1F2937',
+                        light: '#F9FAFB'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #4F46E5 0%, #10B981 100%);
+        }
+        .task-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .highlight {
+            position: relative;
+        }
+        .highlight::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background-color: #A5B4FC;
+            opacity: 0.3;
+            z-index: -1;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F3F4F6;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #A5B4FC;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #818CF8;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="gradient-bg text-white rounded-2xl p-6 mb-8 shadow-lg">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold mb-2">Project Continuation Tracker</h1>
+                    <p class="text-indigo-100">Never lose track of your work again</p>
+                </div>
+                <div class="hidden md:block">
+                    <img src="https://placehold.co/400x300" alt="Illustration of a person organizing work tasks with icons representing productivity" class="h-24 rounded-lg opacity-90" />
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column - Project Input -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-800">Add New Project</h2>
+                    <form id="projectForm">
+                        <div class="mb-4">
+                            <label for="projectName" class="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+                            <input type="text" id="projectName" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="My Awesome Project" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="projectDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                            <textarea id="projectDescription" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="What's this project about?"></textarea>
+                        </div>
+                        <div class="mb-4">
+                            <label for="projectPriority" class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                            <select id="projectPriority" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="projectTags" class="block text-sm font-medium text-gray-700 mb-1">Tags (comma separated)</label>
+                            <input type="text" id="projectTags" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="work, personal, coding">
+                        </div>
+                        <div class="flex items-center mb-4">
+                            <input type="checkbox" id="saveToCloud" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                            <label for="saveToCloud" class="ml-2 block text-sm text-gray-700">Save to cloud storage</label>
+                        </div>
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                            <i class="fas fa-plus-circle mr-2"></i> Add Project
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-800">Quick Actions</h2>
+                    <div class="space-y-3">
+                        <button id="importBtn" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg transition duration-200 flex items-center justify-between">
+                            <span><i class="fas fa-file-import mr-2"></i> Import Projects</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        <button id="exportBtn" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg transition duration-200 flex items-center justify-between">
+                            <span><i class="fas fa-file-export mr-2"></i> Export Projects</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        <button id="reminderBtn" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg transition duration-200 flex items-center justify-between">
+                            <span><i class="fas fa-bell mr-2"></i> Set Daily Reminder</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        <button id="statsBtn" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg transition duration-200 flex items-center justify-between">
+                            <span><i class="fas fa-chart-bar mr-2"></i> View Statistics</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle Column - Active Projects -->
+            <div class="lg:col-span-2">
+                <!-- Progress Tracking -->
+                <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800">Current Progress</h2>
+                        <div class="flex space-x-2">
+                            <button class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-sm">Day</button>
+                            <button class="px-3 py-1 bg-indigo-600 text-white rounded-lg text-sm">Week</button>
+                            <button class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-sm">Month</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-green-700">Completed</span>
+                                <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">+12%</span>
+                            </div>
+                            <h3 class="text-2xl font-bold text-green-800">24</h3>
+                            <div class="w-full bg-green-200 rounded-full h-2">
+                                <div class="bg-green-600 h-2 rounded-full" style="width: 75%"></div>
+                            </div>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-blue-700">In Progress</span>
+                                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">+5%</span>
+                            </div>
+                            <h3 class="text-2xl font-bold text-blue-800">8</h3>
+                            <div class="w-full bg-blue-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full" style="width: 25%"></div>
+                            </div>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-purple-700">Pending</span>
+                                <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">-3%</span>
+                            </div>
+                            <h3 class="text-2xl font-bold text-purple-800">4</h3>
+                            <div class="w-full bg-purple-200 rounded-full h-2">
+                                <div class="bg-purple-600 h-2 rounded-full" style="width: 12%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project List -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold text-gray-800">Your Active Projects</h2>
+                        <div class="flex space-x-2">
+                            <div class="relative">
+                                <select id="filterPriority" class="appearance-none bg-gray-100 border border-gray-300 text-gray-700 py-1 px-3 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                                    <option value="">All Priority</option>
+                                    <option value="urgent">Urgent</option>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                    <i class="fas fa-chevron-down text-xs"></i>
+                                </div>
+                            </div>
+                            <div class="relative">
+                                <select id="filterStatus" class="appearance-none bg-gray-100 border border-gray-300 text-gray-700 py-1 px-3 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                                    <option value="">All Status</option>
+                                    <option value="not-started">Not Started</option>
+                                    <option value="in-progress">In Progress</option>
+                                    <option value="paused">Paused</option>
+                                    <option value="completed">Completed</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                    <i class="fas fa-chevron-down text-xs"></i>
+                                </div>
+                            </div>
+                            <button id="sortBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 py-1 px-3 rounded-lg text-sm flex items-center">
+                                <i class="fas fa-sort-amount-down mr-1"></i> Sort
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Project Cards -->
+                    <div id="projectList" class="space-y-4">
+                        <!-- Project Card 1 -->
+                        <div class="task-card bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition duration-200">
+                            <div class="flex justify-between items-start mb-3">
+                                <div>
+                                    <div class="flex items-center mb-1">
+                                        <h3 class="text-lg font-semibold text-gray-800 mr-2">Website Redesign</h3>
+                                        <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full">Client Work</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600">Complete homepage redesign with new UI components</p>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button class="text-gray-400 hover:text-indigo-600">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="text-gray-400 hover:text-red-600">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-center justify-between mt-4">
+                                <div class="flex items-center space-x-2 mb-2 md:mb-0">
+                                    <span class="text-xs font-medium bg-green-100 text-green-800 px-2 py-1 rounded-full">In Progress</span>
+                                    <span class="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded-full">High Priority</span>
+                                    <span class="text-xs font-medium bg-gray-100 text-gray-800 px-2 py-1 rounded-full">Design</span>
+                                </div>
+                                <div class="flex items-center text-sm text-gray-500">
+                                    <i class="far fa-calendar-alt mr-1"></i>
+                                    <span>Last worked: Today, 10:30 AM</span>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <div class="flex justify-between text-xs text-gray-500 mb-1">
+                                    <span>Progress</span>
+                                    <span>65%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-blue-600 h-2 rounded-full" style="width: 65%"></div>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex justify-end space-x-2">
+                                <button class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-lg transition duration-200 flex items-center">
+                                    <i class="fas fa-bookmark mr-1"></i> Save for Tomorrow
+                                </button>
+                                <button class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg transition duration-200 flex items-center">
+                                    <i class="fas fa-play mr-1"></i> Continue Now
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Project Card 2 -->
+                        <div class="task-card bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition duration-200">
+                            <div class="flex justify-between items-start mb-3">
+                                <div>
+                                    <div class="flex items-center mb-1">
+                                        <h3 class="text-lg font-semibold text-gray-800 mr-2">Mobile App Development</h3>
+                                        <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">Personal</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600">Build the authentication flow for the new fitness app</p>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button class="text-gray-400 hover:text-indigo-600">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="text-gray-400 hover:text-red-600">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-center justify-between mt-4">
+                                <div class="flex items-center space-x-2 mb-2 md:mb-0">
+                                    <span class="text-xs font-medium bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">Paused</span>
+                                    <span class="text-xs font-medium bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">Medium Priority</span>
+                                    <span class="text-xs font-medium bg-gray-100 text-gray-800 px-2 py-1 rounded-full">Coding</span>
+                                </div>
+                                <div class="flex items-center text-sm text-gray-500">
+                                    <i class="far fa-calendar-alt mr-1"></i>
+                                    <span>Last worked: Yesterday, 2:45 PM</span>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <div class="flex justify-between text-xs text-gray-500 mb-1">
+                                    <span>Progress</span>
+                                    <span>30%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-yellow-500 h-2 rounded-full" style="width: 30%"></div>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex justify-end space-x-2">
+                                <button class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-lg transition duration-200 flex items-center">
+                                    <i class="fas fa-bookmark mr-1"></i> Save for Tomorrow
+                                </button>
+                                <button class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg transition duration-200 flex items-center">
+                                    <i class="fas fa-play mr-1"></i> Continue Now
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Project Card 3 -->
+                        <div class="task-card bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition duration-200">
+                            <div class="flex justify-between items-start mb-3">
+                                <div>
+                                    <div class="flex items-center mb-1">
+                                        <h3 class="text-lg font-semibold text-gray-800 mr-2">Blog Post Writing</h3>
+                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Content</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600">Finish draft about modern JavaScript frameworks comparison</p>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button class="text-gray-400 hover:text-indigo-600">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="text-gray-400 hover:text-red-600">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-center justify-between mt-4">
+                                <div class="flex items-center space-x-2 mb-2 md:mb-0">
+                                    <span class="text-xs font-medium bg-green-100 text-green-800 px-2 py-1 rounded-full">Completed</span>
+                                    <span class="text-xs font-medium bg-gray-100 text-gray-800 px-2 py-1 rounded-full">Low Priority</span>
+                                    <span class="text-xs font-medium bg-gray-100 text-gray-800 px-2 py-1 rounded-full">Writing</span>
+                                </div>
+                                <div class="flex items-center text-sm text-gray-500">
+                                    <i class="far fa-calendar-alt mr-1"></i>
+                                    <span>Last worked: 3 days ago, 4:20 PM</span>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <div class="flex justify-between text-xs text-gray-500 mb-1">
+                                    <span>Progress</span>
+                                    <span>100%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-green-600 h-2 rounded-full" style="width: 100%"></div>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex justify-end space-x-2">
+                                <button class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-lg transition duration-200 flex items-center">
+                                    <i class="fas fa-redo mr-1"></i> Restart Task
+                                </button>
+                                <button class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg transition duration-200 flex items-center">
+                                    <i class="fas fa-check mr-1"></i> Mark Complete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="emptyState" class="hidden text-center py-12">
+                        <img src="https://placehold.co/400x300" alt="Empty workspace illustration showing a desk with only a plant and calendar" class="mx-auto h-40 mb-4 rounded-lg" />
+                        <h3 class="text-xl font-medium text-gray-700 mb-2">No Projects Found</h3>
+                        <p class="text-gray-500 mb-4">You don't have any projects matching your current filters.</p>
+                        <button id="resetFiltersBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-6 rounded-lg inline-flex items-center">
+                            <i class="fas fa-filter mr-2"></i> Reset Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation (Mobile) -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white shadow-lg lg:hidden">
+        <div class="flex justify-around items-center p-2">
+            <button class="p-2 text-indigo-600">
+                <i class="fas fa-home text-xl"></i>
+            </button>
+            <button class="p-2 text-gray-500">
+                <i class="fas fa-calendar text-xl"></i>
+            </button>
+            <button class="p-2 text-gray-500">
+                <i class="fas fa-plus-circle text-2xl bg-indigo-600 text-white rounded-full p-1"></i>
+            </button>
+            <button class="p-2 text-gray-500">
+                <i class="fas fa-chart-pie text-xl"></i>
+            </button>
+            <button class="p-2 text-gray-500">
+                <i class="fas fa-cog text-xl"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const projectForm = document.getElementById('projectForm');
+        const projectList = document.getElementById('projectList');
+        const emptyState = document.getElementById('emptyState');
+        const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+        const filterPriority = document.getElementById('filterPriority');
+        const filterStatus = document.getElementById('filterStatus');
+        const sortBtn = document.getElementById('sortBtn');
+        
+        // Project Database (in a real app, this would be localStorage or backend)
+        let projects = [
+            {
+                id: 1,
+                name: "Website Redesign",
+                description: "Complete homepage redesign with new UI components",
+                priority: "high",
+                tags: ["client work", "design"],
+                status: "in-progress",
+                progress: 65,
+                lastWorked: new Date(),
+                type: "Client Work"
+            },
+            {
+                id: 2,
+                name: "Mobile App Development",
+                description: "Build the authentication flow for the new fitness app",
+                priority: "medium",
+                tags: ["personal", "coding"],
+                status: "paused",
+                progress: 30,
+                lastWorked: new Date(Date.now() - 86400000), // Yesterday
+                type: "Personal"
+            },
+            {
+                id: 3,
+                name: "Blog Post Writing",
+                description: "Finish draft about modern JavaScript frameworks comparison",
+                priority: "low",
+                tags: ["content", "writing"],
+                status: "completed",
+                progress: 100,
+                lastWorked: new Date(Date.now() - 3 * 86400000), // 3 days ago
+                type: "Content"
+            }
+        ];
+
+        // Form Submission
+        projectForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('projectName').value;
+            const description = document.getElementById('projectDescription').value;
+            const priority = document.getElementById('projectPriority').value;
+            const tags = document.getElementById('projectTags').value.split(',').map(tag => tag.trim());
+            
+            // Create new project
+            const newProject = {
+                id: projects.length + 1,
+                name,
+                description,
+                priority,
+                tags,
+                status: "not-started",
+                progress: 0,
+                lastWorked: new Date(),
+                type: "New Project"
+            };
+            
+            projects.unshift(newProject);
+            renderProjects();
+            
+            // Reset form
+            projectForm.reset();
+            
+            // Show success message
+            alert('Project added successfully!');
+        });
+
+        // Filter Projects
+        function applyFilters() {
+            const priorityFilter = filterPriority.value;
+            const statusFilter = filterStatus.value;
+            
+            let filteredProjects = projects;
+            
+            if (priorityFilter) {
+                filteredProjects = filteredProjects.filter(project => project.priority === priorityFilter);
+            }
+            
+            if (statusFilter) {
+                filteredProjects = filteredProjects.filter(project => project.status === statusFilter);
+            }
+            
+            return filteredProjects;
+        }
+
+        // Render Projects
+        function renderProjects() {
+            const filteredProjects = applyFilters();
+            
+            if (filteredProjects.length === 0) {
+                projectList.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+            } else {
+                projectList.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+                
+                // In a real app, you would dynamically generate project cards
+                // For this demo, we're using static HTML with filtered projects
+            }
+        }
+
+        // Event Listeners
+        filterPriority.addEventListener('change', renderProjects);
+        filterStatus.addEventListener('change', renderProjects);
+        resetFiltersBtn.addEventListener('click', function() {
+            filterPriority.value = '';
+            filterStatus.value = '';
+            renderProjects();
+        });
+
+        // Sort Button (placeholder functionality)
+        sortBtn.addEventListener('click', function() {
+            alert('Sort functionality would be implemented here');
+        });
+
+        // Quick Action Buttons (placeholders)
+        document.getElementById('importBtn').addEventListener('click', function() {
+            alert('Import functionality would be implemented here');
+        });
+        
+        document.getElementById('exportBtn').addEventListener('click', function() {
+            alert('Export functionality would be implemented here');
+        });
+        
+        document.getElementById('reminderBtn').addEventListener('click', function() {
+            alert('Reminder functionality would be implemented here');
+        });
+        
+        document.getElementById('statsBtn').addEventListener('click', function() {
+            alert('Statistics functionality would be implemented here');
+        });
+
+        // Initialize
+        renderProjects();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Journals Hub</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom CSS variables for consistent theming */
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --accent: #4895ef;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --success: #4cc9f0;
+            --danger: #f72585;
+            --warning: #f8961e;
+            --info: #560bad;
+        }
+
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            /* Prioritize 'Inter' for a modern, pleasing font, with fallbacks */
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fb;
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header styles */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+        }
+
+        .logo i {
+            margin-right: 10px;
+            color: var(--accent);
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+        }
+
+        nav ul li {
+            margin-left: 20px;
+        }
+
+        nav ul li a {
+            text-decoration: none;
+            color: var(--dark);
+            font-weight: 500;
+            transition: color 0.3s;
+            padding: 8px 12px;
+            border-radius: 6px;
+        }
+
+        nav ul li a:hover, nav ul li a.active {
+            color: var(--primary);
+            background-color: rgba(67, 97, 238, 0.1);
+        }
+
+        .user-actions {
+            display: flex;
+            align-items: center;
+        }
+
+        .user-actions .btn {
+            margin-left: 15px;
+        }
+
+        /* Button styles */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--secondary);
+            transform: translateY(-2px);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #d81b60; /* Darker red */
+        }
+        
+        /* Layout for main content - Flexbox for two columns */
+        .main-content {
+            display: flex;
+            gap: 30px; /* Space between the two columns */
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+        }
+
+        .left-column {
+            flex: 1; /* Takes 1 part of available space (smaller) */
+            min-width: 280px; /* Minimum width to prevent squishing */
+        }
+
+        .right-column {
+            flex: 3; /* Takes 3 parts of available space (larger) */
+            min-width: 350px; /* Minimum width for content visibility */
+        }
+
+        /* Journal Grid and Card styles */
+        .journal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* Smaller cards */
+            gap: 20px; /* Reduced gap */
+            margin-top: 30px;
+        }
+
+        .journal-card {
+            background-color: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+        }
+
+        .journal-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .journal-header {
+            height: 100px; /* Slightly smaller header height */
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .trading .journal-header {
+            background: linear-gradient(135deg, #3a0ca3, #7209b7);
+        }
+
+        .webdev .journal-header {
+            background: linear-gradient(135deg, #4895ef, #4cc9f0);
+        }
+
+        .personal .journal-header {
+            background: linear-gradient(135deg, #f72585, #b5179e);
+        }
+
+        .journal-icon {
+            font-size: 36px; /* Slightly smaller icon */
+        }
+
+        .journal-body {
+            padding: 15px; /* Reduced padding */
+        }
+
+        .journal-title {
+            font-size: 18px; /* Slightly smaller title */
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--dark);
+        }
+
+        .journal-desc {
+            color: #666;
+            margin-bottom: 15px; /* Reduced margin */
+            font-size: 15px; /* Increased font size for better readability */
+            line-height: 1.5; /* Adjusted line height */
+        }
+
+        .journal-stats {
+            display: flex;
+            flex-direction: column; /* Stack stats for better readability in smaller cards */
+            font-size: 11px; /* Smaller stats font */
+            color: #888;
+            margin-bottom: 10px; /* Reduced margin */
+        }
+        .journal-stats span {
+            margin-bottom: 3px; /* Space between stacked stats */
+        }
+        .journal-stats span i {
+            margin-right: 5px;
+        }
+
+        .journal-actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px; /* Reduced gap */
+        }
+
+        .journal-actions .btn {
+            padding: 7px 12px; /* Reduced padding */
+            font-size: 12px; /* Reduced font size */
+        }
+
+        /* Badges for categories */
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px; /* Added margin for better separation */
+        }
+
+        .badge-trading {
+            background-color: rgba(58, 12, 163, 0.1);
+            color: #3a0ca3;
+        }
+
+        .badge-webdevelopment { /* Updated class name for consistency */
+            background-color: rgba(72, 149, 239, 0.1);
+            color: #4895ef;
+        }
+
+        .badge-personaldevelopment { /* Updated class name for consistency */
+            background-color: rgba(247, 37, 133, 0.1);
+            color: #f72585;
+        }
+
+        /* Search bar styles */
+        .search-bar {
+            display: flex;
+            margin-bottom: 30px;
+            max-width: 600px;
+            width: 100%; /* Ensure it spans available width */
+            margin-left: auto; /* Center the search bar */
+            margin-right: auto;
+        }
+
+        .search-bar input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px 0 0 6px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .search-bar input:focus {
+            border-color: var(--primary);
+        }
+
+        .search-bar button {
+            padding: 0 20px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0 6px 6px 0;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .search-bar button:hover {
+            background-color: var(--secondary);
+        }
+
+        /* Section titles */
+        .section-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title i {
+            margin-right: 10px;
+            color: var(--accent);
+        }
+
+        /* Recent Entries section */
+        .recent-entries {
+            margin-top: 0; /* Remove top margin as it's now in right-column */
+        }
+
+        .entry-list {
+            background-color: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .entry-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex; /* Use flexbox for layout */
+            align-items: center; /* Align items vertically in the middle */
+            justify-content: space-between; /* Space out content and actions */
+            transition: background-color 0.3s;
+        }
+
+        .entry-item:last-child {
+            border-bottom: none;
+        }
+
+        .entry-item:hover {
+            background-color: #f9f9f9;
+        }
+
+        .entry-info-wrapper { /* Wrapper for title, meta, and content preview */
+            flex-grow: 1; /* Allow this part to grow and take available space */
+            margin-right: 20px; /* Space between content and actions */
+        }
+
+        .entry-title {
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .entry-meta {
+            font-size: 13px;
+            color: #777;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 5px; /* Space between meta and content preview */
+        }
+
+        .entry-date {
+            margin-right: 10px;
+        }
+
+        .entry-category {
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .entry-content-preview {
+            font-size: 15px; /* Increased font size for better readability */
+            color: #555;
+            max-height: 40px; /* Limit height for preview */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2; /* Show only 2 lines */
+            -webkit-box-orient: vertical;
+            line-height: 1.5; /* Adjusted line height */
+        }
+
+        .entry-actions {
+            display: flex;
+            gap: 15px;
+            flex-shrink: 0; /* Prevent actions from shrinking */
+        }
+
+        .entry-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #888;
+            font-size: 17px;
+            transition: color 0.3s, transform 0.2s;
+        }
+
+        .entry-actions button:hover {
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        .entry-actions button.delete-btn:hover {
+            color: var(--danger);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 600px; /* Increased max-width for content modal */
+            position: relative;
+        }
+
+        .close-button {
+            color: #aaa;
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .modal-content label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+
+        .modal-content input[type="text"],
+        .modal-content input[type="datetime-local"],
+        .modal-content select,
+        .modal-content textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box; /* Ensures padding doesn't add to width */
+            font-size: 16px;
+        }
+        .modal-content textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .modal-content button[type="submit"] {
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+        }
+
+        .modal-content button[type="submit"]:hover {
+            background-color: var(--secondary);
+            transform: translateY(-2px);
+        }
+
+        /* Confirmation Modal */
+        #confirmation-modal .modal-content {
+            text-align: center;
+            max-width: 400px; /* Smaller for confirmation */
+        }
+        #confirmation-modal .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        #confirmation-modal .modal-buttons button {
+            flex: 1; /* Distribute space equally */
+            max-width: 120px;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+        }
+        #confirmation-modal .modal-buttons .btn-cancel {
+            background-color: #ddd;
+            color: var(--dark);
+        }
+        #confirmation-modal .modal-buttons .btn-cancel:hover {
+            background-color: #ccc;
+        }
+
+        /* View Entry Modal Specific Styles */
+        #view-entry-modal .modal-content {
+            max-width: 700px; /* Wider for full content */
+        }
+
+        #view-entry-modal .view-entry-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        #view-entry-modal .view-entry-meta {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 20px;
+        }
+
+        #view-entry-modal .view-entry-content {
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 16px;
+            line-height: 1.8;
+            white-space: pre-wrap; /* Preserve whitespace and line breaks */
+            word-wrap: break-word; /* Break long words */
+            max-height: 400px; /* Limit height for scrollable content */
+            overflow-y: auto; /* Enable scrolling for long content */
+        }
+
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            nav ul {
+                margin-top: 15px;
+                flex-wrap: wrap;
+            }
+
+            nav ul li {
+                margin: 5px;
+            }
+
+            .user-actions {
+                margin-top: 15px;
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            .main-content {
+                flex-direction: column; /* Stack columns vertically on small screens */
+                gap: 20px; /* Adjust gap for stacked layout */
+            }
+
+            .journal-grid {
+                grid-template-columns: 1fr; /* Single column on small screens */
+            }
+
+            .search-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-bar input {
+                border-radius: 6px;
+                margin-bottom: 10px;
+            }
+
+            .search-bar button {
+                border-radius: 6px;
+                padding: 12px 20px; /* Make button taller */
+            }
+
+            .entry-item {
+                flex-direction: column; /* Stack vertically on small screens */
+                align-items: flex-start;
+            }
+
+            .entry-info-wrapper {
+                margin-right: 0; /* Remove margin on small screens */
+                margin-bottom: 10px; /* Add some bottom margin */
+            }
+
+            .entry-actions {
+                width: 100%;
+                justify-content: flex-end;
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-book-open"></i>
+                <span>My Journals Hub</span>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="#" class="active" id="nav-all">Home</a></li>
+                    <li><a href="#" id="nav-trading">Trading</a></li>
+                    <li><a href="#" id="nav-webdev">Web Dev</a></li>
+                    <li><a href="#" id="nav-personal">Personal</a></li>
+                    <li><a href="#">Templates</a></li>
+                </ul>
+            </nav>
+            <div class="user-actions">
+                <button class="btn btn-outline">Sign In</button>
+                <button class="btn btn-primary">Sign Up</button>
+                <button class="btn btn-primary" id="save-to-file-btn" style="margin-left: 15px;"><i class="fas fa-download"></i> Save to File</button>
+            </div>
+        </header>
+
+        <div class="search-bar">
+            <input type="text" id="search-input" placeholder="Search across all journals...">
+            <button id="search-button"><i class="fas fa-search"></i></button>
+        </div>
+
+        <div class="main-content">
+            <div class="left-column">
+                <h2 class="section-title">
+                    <i class="fas fa-layer-group"></i>
+                    My Journals
+                </h2>
+
+                <div class="journal-grid">
+                    <div class="journal-card trading">
+                        <div class="journal-header">
+                            <i class="fas fa-chart-line journal-icon"></i>
+                        </div>
+                        <div class="journal-body">
+                            <span class="badge badge-trading">Trading</span>
+                            <h3 class="journal-title">Trading Journal</h3>
+                            <p class="journal-desc">Track your trades, analyze patterns, and improve your trading strategy with detailed analytics.</p>
+                            <div class="journal-stats">
+                                <span id="trading-entry-count"><i class="far fa-file-alt"></i> 0 entries</span>
+                                <span id="trading-last-updated"><i class="far fa-clock"></i> Never updated</span>
+                            </div>
+                            <div class="journal-actions">
+                                <button class="btn btn-outline view-all-category-btn" data-category="Trading">View All</button>
+                                <button class="btn btn-primary new-entry-category-btn" data-category="Trading">New Entry</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="journal-card webdev">
+                        <div class="journal-header">
+                            <i class="fas fa-code journal-icon"></i>
+                        </div>
+                        <div class="journal-body">
+                            <span class="badge badge-webdevelopment">Web Dev</span>
+                            <h3 class="journal-title">Web Dev Journal</h3>
+                            <p class="journal-desc">Document your coding journey, save snippets, and track your progress in web development.</p>
+                            <div class="journal-stats">
+                                <span id="webdevelopment-entry-count"><i class="far fa-file-alt"></i> 0 entries</span>
+                                <span id="webdevelopment-last-updated"><i class="far fa-clock"></i> Never updated</span>
+                            </div>
+                            <div class="journal-actions">
+                                <button class="btn btn-outline view-all-category-btn" data-category="Web Development">View All</button>
+                                <button class="btn btn-primary new-entry-category-btn" data-category="Web Development">New Entry</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="journal-card personal">
+                        <div class="journal-header">
+                            <i class="fas fa-brain journal-icon"></i>
+                        </div>
+                        <div class="journal-body">
+                            <span class="badge badge-personaldevelopment">Personal</span>
+                            <h3 class="journal-title">Personal Growth</h3>
+                            <p class="journal-desc">Reflect on your personal development, set goals, and celebrate your achievements.</p>
+                            <div class="journal-stats">
+                                <span id="personaldevelopment-entry-count"><i class="far fa-file-alt"></i> 0 entries</span>
+                                <span id="personaldevelopment-last-updated"><i class="far fa-clock"></i> Never updated</span>
+                            </div>
+                            <div class="journal-actions">
+                                <button class="btn btn-outline view-all-category-btn" data-category="Personal Development">View All</button>
+                                <button class="btn btn-primary new-entry-category-btn" data-category="Personal Development">New Entry</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-column">
+                <div class="recent-entries">
+                    <h2 class="section-title">
+                        <i class="fas fa-history"></i>
+                        Recent Entries
+                    </h2>
+
+                    <div class="entry-list" id="journal-entry-list">
+                        <p id="no-entries-message" style="text-align: center; color: #888; padding: 20px;">No entries yet. Add your first journal entry!</p>
+                        <p id="no-filtered-entries-message" style="text-align: center; color: #888; padding: 20px; display: none;">No entries found for this category.</p>
+                        <p id="no-search-results-message" style="text-align: center; color: #888; padding: 20px; display: none;">No entries found matching your search.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="journal-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 id="modal-title-text" style="font-size: 24px; font-weight: 600; margin-bottom: 20px; color: var(--dark);">Add New Journal Entry</h2>
+            <form id="journal-form">
+                <div>
+                    <label for="modal-journal-category">Category</label>
+                    <select id="modal-journal-category" required>
+                        <option value="">Select a category</option>
+                        <option value="Trading">Trading</option>
+                        <option value="Web Development">Web Development</option>
+                        <option value="Personal Development">Personal Development</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="modal-journal-title">Title</label>
+                    <input type="text" id="modal-journal-title" required placeholder="e.g., Daily Trading Reflection">
+                </div>
+                <div>
+                    <label for="modal-journal-content">Content</label>
+                    <textarea id="modal-journal-content" rows="6" required placeholder="Write your journal entry here..."></textarea>
+                </div>
+                <div>
+                    <label for="modal-journal-datetime">Date and Time</label>
+                    <input type="datetime-local" id="modal-journal-datetime" required>
+                </div>
+                <button type="submit" id="modal-submit-btn">Add Entry</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="confirmation-modal" class="modal">
+        <div class="modal-content">
+            <p id="confirmation-message" style="font-size: 18px; margin-bottom: 20px;"></p>
+            <div class="modal-buttons">
+                <button id="modal-confirm-action-btn" class="btn btn-danger">Confirm</button>
+                <button id="modal-cancel-action-btn" class="btn btn-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-entry-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 class="view-entry-title" id="view-entry-title"></h2>
+            <div class="view-entry-meta">
+                <span id="view-entry-date"></span> &bull; <span id="view-entry-category" class="badge"></span>
+            </div>
+            <div class="view-entry-content" id="view-entry-content"></div>
+        </div>
+    </div>
+
+    <script>
+        // Unique identifier for this application's data in local storage
+        const appId = 'my-journals-hub';
+
+        // DOM Elements for the main page
+        const journalEntryList = document.getElementById('journal-entry-list');
+        const noEntriesMessage = document.getElementById('no-entries-message');
+        const noFilteredEntriesMessage = document.getElementById('no-filtered-entries-message');
+        const noSearchResultsMessage = document.getElementById('no-search-results-message');
+        const saveToFileBtn = document.getElementById('save-to-file-btn'); // New save to file button
+
+        // Modal Elements (for Add/Edit)
+        const journalModal = document.getElementById('journal-modal');
+        const closeModalButton = journalModal.querySelector('.close-button');
+        const modalTitleText = document.getElementById('modal-title-text');
+        const journalForm = document.getElementById('journal-form');
+        const modalJournalCategory = document.getElementById('modal-journal-category');
+        const modalJournalTitle = document.getElementById('modal-journal-title');
+        const modalJournalContent = document.getElementById('modal-journal-content');
+        const modalJournalDatetime = document.getElementById('modal-journal-datetime'); // New datetime input
+        const modalSubmitBtn = document.getElementById('modal-submit-btn');
+
+        // Confirmation Modal Elements
+        const confirmationModal = document.getElementById('confirmation-modal');
+        const confirmationMessage = document.getElementById('confirmation-message');
+        const modalConfirmActionButton = document.getElementById('modal-confirm-action-btn');
+        const modalCancelActionButton = document.getElementById('modal-cancel-action-btn');
+
+        // View Entry Modal Elements
+        const viewEntryModal = document.getElementById('view-entry-modal');
+        const viewEntryTitle = document.getElementById('view-entry-title');
+        const viewEntryDate = document.getElementById('view-entry-date');
+        const viewEntryCategory = document.getElementById('view-entry-category');
+        const viewEntryContent = document.getElementById('view-entry-content');
+        const closeViewModalButton = viewEntryModal.querySelector('.close-button');
+
+
+        // Category Navigation Buttons
+        const navAll = document.getElementById('nav-all');
+        const navTrading = document.getElementById('nav-trading');
+        const navWebdev = document.getElementById('nav-webdev');
+        const navPersonal = document.getElementById('nav-personal');
+
+        // Category Cards 'New Entry' and 'View All' Buttons
+        const newEntryCategoryButtons = document.querySelectorAll('.new-entry-category-btn');
+        const viewAllCategoryButtons = document.querySelectorAll('.view-all-category-btn');
+
+        // Search functionality elements
+        const searchInput = document.getElementById('search-input');
+        const searchButton = document.getElementById('search-button');
+
+        let currentCategoryFilter = 'All'; // Default filter state
+        let currentSearchQuery = ''; // Default search query
+        let editingEntryId = null; // Stores the ID of the entry being edited
+
+        /**
+         * Displays the custom confirmation/message modal.
+         * @param {string} message - The message to display.
+         * @param {function|null} onConfirm - Callback for 'Confirm' button. If null, 'Confirm' button is hidden.
+         * @param {string} confirmText - Text for the confirm button (e.g., 'Delete').
+         * @param {string} cancelText - Text for the cancel button (e.g., 'Cancel', 'Close').
+         */
+        function showCustomModal(message, onConfirm = null, confirmText = 'Confirm', cancelText = 'Close') {
+            confirmationMessage.textContent = message;
+            modalConfirmActionButton.textContent = confirmText;
+            modalCancelActionButton.textContent = cancelText;
+
+            // Clear previous event listeners
+            modalConfirmActionButton.onclick = null;
+            modalCancelActionButton.onclick = null;
+
+            if (onConfirm) {
+                modalConfirmActionButton.style.display = 'inline-block'; // Show button
+                modalConfirmActionButton.onclick = () => {
+                    onConfirm();
+                    confirmationModal.style.display = 'none'; // Hide modal after action
+                };
+            } else {
+                modalConfirmActionButton.style.display = 'none'; // Hide button if no confirm action
+            }
+
+            modalCancelActionButton.onclick = () => {
+                confirmationModal.style.display = 'none'; // Always hide on cancel/close
+            };
+
+            confirmationModal.style.display = 'flex'; // Show modal
+        }
+
+        /**
+         * Loads journal entries from local storage.
+         * @returns {Array} An array of journal entries, or an empty array if none exist.
+         */
+        function loadJournals() {
+            try {
+                const data = localStorage.getItem(appId);
+                return data ? JSON.parse(data) : [];
+            } catch (error) {
+                console.error('Error loading journals from local storage:', error);
+                showCustomModal('Failed to load journals. Data might be corrupted.', null, 'Close', 'Close');
+                return [];
+            }
+        }
+
+        /**
+         * Saves journal entries to local storage.
+         * @param {Array} journals - The array of journal entries to save.
+         */
+        function saveJournals(journals) {
+            try {
+                localStorage.setItem(appId, JSON.stringify(journals));
+            } catch (error) {
+                console.error('Error saving journals to local storage:', error);
+                showCustomModal('Failed to save journal. Local storage might be full or unavailable.', null, 'Close', 'Close');
+            }
+        }
+
+        /**
+         * Formats a date string into a more readable format.
+         * @param {string} dateString - The date string (e.g., from datetime-local input).
+         * @returns {string} Formatted date.
+         */
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            try {
+                return new Date(dateString).toLocaleString(undefined, options);
+            } catch (error) {
+                console.error('Error formatting date:', dateString, error);
+                return dateString; // Return original if invalid
+            }
+        }
+
+        /**
+         * Renders journal entries based on the current filter and search query.
+         */
+        function renderJournals() {
+            const allJournals = loadJournals();
+            journalEntryList.innerHTML = ''; // Clear existing entries
+
+            let filteredAndSearchedJournals = allJournals;
+
+            // Apply category filter
+            if (currentCategoryFilter !== 'All') {
+                filteredAndSearchedJournals = filteredAndSearchedJournals.filter(entry => entry.category === currentCategoryFilter);
+            }
+
+            // Apply search query filter
+            if (currentSearchQuery) {
+                const lowerCaseQuery = currentSearchQuery.toLowerCase();
+                filteredAndSearchedJournals = filteredAndSearchedJournals.filter(entry =>
+                    entry.title.toLowerCase().includes(lowerCaseQuery) ||
+                    entry.content.toLowerCase().includes(lowerCaseQuery) ||
+                    entry.category.toLowerCase().includes(lowerCaseQuery)
+                );
+            }
+            
+            // Sort by date (most recent first)
+            filteredAndSearchedJournals.sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
+
+            // Hide all messages initially
+            noEntriesMessage.style.display = 'none';
+            noFilteredEntriesMessage.style.display = 'none';
+            noSearchResultsMessage.style.display = 'none';
+
+            if (allJournals.length === 0) {
+                noEntriesMessage.style.display = 'block';
+            } else if (filteredAndSearchedJournals.length === 0 && currentCategoryFilter !== 'All') {
+                noFilteredEntriesMessage.style.display = 'block';
+            } else if (filteredAndSearchedJournals.length === 0 && currentSearchQuery) {
+                noSearchResultsMessage.style.display = 'block';
+            } else if (filteredAndSearchedJournals.length === 0) {
+                // This condition should ideally not be reached if allJournals.length > 0,
+                // but acts as a fallback for cases where filtering results in no entries
+                // without an active search/category filter (e.g., after deleting all in a filtered view)
+                noFilteredEntriesMessage.style.display = 'block';
+            }
+
+
+            filteredAndSearchedJournals.forEach(entry => {
+                const entryItem = document.createElement('div');
+                entryItem.className = 'entry-item';
+                entryItem.dataset.id = entry.id; // Store ID on the element
+
+                const categoryBadgeClass = `badge-${entry.category.toLowerCase().replace(/\s/g, '')}`;
+
+                entryItem.innerHTML = `
+                    <div class="entry-info-wrapper">
+                        <h3 class="entry-title">${entry.title}</h3>
+                        <div class="entry-meta">
+                            <span class="entry-date">${formatDate(entry.datetime)}</span> &bull;
+                            <span class="entry-category ${categoryBadgeClass}">${entry.category}</span>
+                        </div>
+                        <p class="entry-content-preview">${entry.content}</p>
+                    </div>
+                    <div class="entry-actions">
+                        <button class="view-btn" title="View Entry"><i class="fas fa-eye"></i></button>
+                        <button class="edit-btn" title="Edit Entry"><i class="fas fa-edit"></i></button>
+                        <button class="delete-btn" title="Delete Entry"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                `;
+                journalEntryList.appendChild(entryItem);
+            });
+            updateJournalStats(allJournals);
+        }
+
+        /**
+         * Updates the entry counts and last updated times on the journal cards.
+         * @param {Array} allJournals - The array of all journal entries.
+         */
+        function updateJournalStats(allJournals) {
+            const categories = ['Trading', 'Web Development', 'Personal Development'];
+            categories.forEach(category => {
+                const categoryClass = category.toLowerCase().replace(/\s/g, ''); // Ensure class name matches ID
+                const countSpan = document.getElementById(`${categoryClass}-entry-count`);
+                const lastUpdatedSpan = document.getElementById(`${categoryClass}-last-updated`);
+
+                const categoryEntries = allJournals.filter(entry => entry.category === category);
+                if (countSpan) {
+                    countSpan.innerHTML = `<i class="far fa-file-alt"></i> ${categoryEntries.length} entries`;
+                }
+
+                if (lastUpdatedSpan) {
+                    if (categoryEntries.length > 0) {
+                        // Find the most recent entry for this category
+                        const mostRecentEntry = categoryEntries.sort((a, b) => new Date(b.datetime) - new Date(a.datetime))[0];
+                        lastUpdatedSpan.innerHTML = `<i class="far fa-clock"></i> Last updated: ${formatDate(mostRecentEntry.datetime)}`;
+                    } else {
+                        lastUpdatedSpan.innerHTML = `<i class="far fa-clock"></i> Never updated`;
+                    }
+                }
+            });
+        }
+
+        /**
+         * Handles opening the add/edit journal entry modal.
+         * @param {object|null} entry - The journal entry object to edit, or null for a new entry.
+         * @param {string|null} category - Pre-fill category for new entries from card buttons.
+         */
+        function openJournalModal(entry = null, category = null) {
+            journalForm.reset(); // Clear form
+            editingEntryId = entry ? entry.id : null; // Set editing ID
+            modalSubmitBtn.textContent = entry ? 'Update Entry' : 'Add Entry';
+            modalTitleText.textContent = entry ? 'Edit Journal Entry' : 'Add New Journal Entry';
+
+            if (entry) {
+                modalJournalCategory.value = entry.category;
+                modalJournalTitle.value = entry.title;
+                modalJournalContent.value = entry.content;
+                modalJournalDatetime.value = entry.datetime; // Set date and time directly
+            } else if (category) {
+                modalJournalCategory.value = category; // Pre-fill category if provided
+            } else {
+                modalJournalCategory.value = ''; // Ensure no pre-filled category for general new entry
+            }
+
+            // Set current datetime for new entries if not provided (when opening modal without pre-filling)
+            if (!entry) {
+                modalJournalDatetime.value = new Date().toISOString().slice(0, 16);
+            }
+
+            journalModal.style.display = 'flex'; // Show the modal
+        }
+
+        /**
+         * Handles opening the view journal entry modal.
+         * @param {object} entry - The journal entry object to view.
+         */
+        function openViewEntryModal(entry) {
+            viewEntryTitle.textContent = entry.title;
+            viewEntryDate.textContent = formatDate(entry.datetime);
+            viewEntryCategory.textContent = entry.category;
+            viewEntryCategory.className = `badge badge-${entry.category.toLowerCase().replace(/\s/g, '')}`;
+            viewEntryContent.textContent = entry.content;
+
+            viewEntryModal.style.display = 'flex';
+        }
+
+
+        // Event Listeners
+
+        // Close Modals
+        closeModalButton.addEventListener('click', () => {
+            journalModal.style.display = 'none';
+        });
+        closeViewModalButton.addEventListener('click', () => {
+            viewEntryModal.style.display = 'none';
+        });
+
+        // Close modals when clicking outside
+        window.addEventListener('click', (event) => {
+            if (event.target === journalModal) {
+                journalModal.style.display = 'none';
+            }
+            if (event.target === confirmationModal) {
+                confirmationModal.style.display = 'none';
+            }
+            if (event.target === viewEntryModal) {
+                viewEntryModal.style.display = 'none';
+            }
+        });
+
+        // Handle Add/Edit Form Submission
+        journalForm.addEventListener('submit', (event) => {
+            event.preventDefault(); // Prevent default form submission
+
+            const category = modalJournalCategory.value;
+            const title = modalJournalTitle.value;
+            const content = modalJournalContent.value;
+            const datetime = modalJournalDatetime.value; // Get the raw datetime-local value
+
+            const allJournals = loadJournals();
+
+            if (editingEntryId) {
+                // Editing existing entry
+                const index = allJournals.findIndex(entry => entry.id === editingEntryId);
+                if (index !== -1) {
+                    allJournals[index] = { id: editingEntryId, category, title, content, datetime };
+                    saveJournals(allJournals);
+                    showCustomModal('Journal entry updated successfully!', null, 'Close', 'OK');
+                } else {
+                    showCustomModal('Error: Entry to edit not found.', null, 'Close', 'OK');
+                }
+            } else {
+                // Adding new entry
+                const newEntry = {
+                    id: Date.now().toString(), // Simple unique ID
+                    category,
+                    title,
+                    content,
+                    datetime
+                };
+                allJournals.push(newEntry);
+                saveJournals(allJournals);
+                showCustomModal('New journal entry added successfully!', null, 'Close', 'OK');
+            }
+
+            journalModal.style.display = 'none'; // Hide modal
+            renderJournals(); // Re-render the list
+        });
+
+        // Delegate clicks for edit, delete, and view buttons
+        journalEntryList.addEventListener('click', (event) => {
+            const target = event.target;
+            const entryItem = target.closest('.entry-item'); // Get the closest entry item ancestor
+
+            if (!entryItem) return; // Not an entry item
+
+            const entryId = entryItem.dataset.id;
+            const allJournals = loadJournals();
+            const entryToModify = allJournals.find(entry => entry.id === entryId);
+
+            if (!entryToModify) {
+                showCustomModal('Error: Journal entry not found.', null, 'Close', 'OK');
+                return;
+            }
+
+            if (target.closest('.edit-btn')) {
+                openJournalModal(entryToModify);
+            } else if (target.closest('.delete-btn')) {
+                showCustomModal('Are you sure you want to delete this entry?', () => {
+                    const updatedJournals = allJournals.filter(entry => entry.id !== entryId);
+                    saveJournals(updatedJournals);
+                    renderJournals(); // Re-render after deletion
+                }, 'Delete', 'Cancel');
+            } else if (target.closest('.view-btn')) {
+                openViewEntryModal(entryToModify);
+            }
+        });
+
+        // Category Navigation Filter
+        navAll.addEventListener('click', (event) => {
+            event.preventDefault();
+            currentCategoryFilter = 'All';
+            currentSearchQuery = ''; // Clear search when changing category
+            searchInput.value = '';
+            document.querySelectorAll('nav ul li a').forEach(link => link.classList.remove('active'));
+            navAll.classList.add('active');
+            renderJournals();
+        });
+
+        navTrading.addEventListener('click', (event) => {
+            event.preventDefault();
+            currentCategoryFilter = 'Trading';
+            currentSearchQuery = ''; // Clear search when changing category
+            searchInput.value = '';
+            document.querySelectorAll('nav ul li a').forEach(link => link.classList.remove('active'));
+            navTrading.classList.add('active');
+            renderJournals();
+        });
+
+        navWebdev.addEventListener('click', (event) => {
+            event.preventDefault();
+            currentCategoryFilter = 'Web Development';
+            currentSearchQuery = ''; // Clear search when changing category
+            searchInput.value = '';
+            document.querySelectorAll('nav ul li a').forEach(link => link.classList.remove('active'));
+            navWebdev.classList.add('active');
+            renderJournals();
+        });
+
+        navPersonal.addEventListener('click', (event) => {
+            event.preventDefault();
+            currentCategoryFilter = 'Personal Development';
+            currentSearchQuery = ''; // Clear search when changing category
+            searchInput.value = '';
+            document.querySelectorAll('nav ul li a').forEach(link => link.classList.remove('active'));
+            navPersonal.classList.add('active');
+            renderJournals();
+        });
+
+        // 'New Entry' buttons on category cards
+        newEntryCategoryButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const category = button.dataset.category;
+                openJournalModal(null, category); // Pass category to pre-fill
+            });
+        });
+
+        // 'View All' buttons on category cards
+        viewAllCategoryButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const category = button.dataset.category;
+                currentCategoryFilter = category;
+                currentSearchQuery = ''; // Clear search when changing category
+                searchInput.value = '';
+                // Update active navigation link
+                document.querySelectorAll('nav ul li a').forEach(link => link.classList.remove('active'));
+                if (category === 'Trading') navTrading.classList.add('active');
+                if (category === 'Web Development') navWebdev.classList.add('active');
+                if (category === 'Personal Development') navPersonal.classList.add('active');
+                renderJournals();
+            });
+        });
+
+        // Search Functionality
+        searchButton.addEventListener('click', () => {
+            currentSearchQuery = searchInput.value.trim();
+            // When searching, reset category filter to 'All' to search across all,
+            // or keep the current filter if the user expects search within category.
+            // For this implementation, let's reset to 'All' for broader search.
+            currentCategoryFilter = 'All';
+            document.querySelectorAll('nav ul li a').forEach(link => link.classList.remove('active'));
+            navAll.classList.add('active'); // Set 'Home' as active when performing a general search
+            renderJournals();
+        });
+
+        searchInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                currentSearchQuery = searchInput.value.trim();
+                renderJournals();
+            }
+        });
+        
+        // Save to File Functionality
+        saveToFileBtn.addEventListener('click', () => {
+            const allJournals = loadJournals();
+            if (allJournals.length === 0) {
+                showCustomModal("There are no entries to save yet!", null, 'Close', 'OK');
+                return;
+            }
+
+            const dataStr = JSON.stringify(allJournals, null, 2); // Pretty print JSON
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `my_journals_hub_${new Date().toISOString().slice(0, 10)}.json`; // Filename with date
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url); // Clean up the URL object
+
+            showCustomModal("Your journal entries have been saved to a file!", null, 'Close', 'OK');
+        });
+
+
+        // Initial render when the page loads
+        document.addEventListener('DOMContentLoaded', renderJournals);
+    </script>
+</body>
+</html>

@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Category Mind Map</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #f5f5f5;
+        }
+        
+        #mindmap-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+            background-color: white;
+        }
+        
+        .node {
+            position: absolute;
+            width: 100px;
+            height: 50px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            cursor: move;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            transition: all 0.2s;
+            resize: none;
+        }
+        
+        .main-node {
+            border: 3px solid #4CAF50;
+            background-color: #E8F5E9;
+            font-weight: bold;
+            width: 120px;
+            height: 60px;
+            z-index: 2;
+        }
+        
+        .sub-node {
+            border: 2px solid #2196F3;
+            background-color: #E3F2FD;
+            z-index: 1;
+        }
+        
+        .node.selected {
+            box-shadow: 0 0 15px rgba(255, 152, 0, 0.7);
+            transform: scale(1.02);
+        }
+        
+        .node-content {
+            width: 100%;
+            height: 100%;
+            outline: none;
+            background: transparent;
+            border: none;
+            resize: none;
+            text-align: center;
+            font-family: inherit;
+            overflow: hidden;
+            cursor: text;
+        }
+        
+        .connector {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background-color: #FF9800;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 10;
+            border: 2px solid white;
+        }
+        
+        .connector.top {
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .connector.bottom {
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .connector.left {
+            left: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .connector.right {
+            right: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .connection {
+            position: absolute;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .hierarchical-connection {
+            position: absolute;
+            pointer-events: none;
+            z-index: 0;
+            border-left: 2px dashed #9E9E9E;
+        }
+        
+        .arrow {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #FF5722;
+            transform: rotate(45deg);
+            right: -7px;
+            top: -5px;
+        }
+        
+        #toolbar {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            max-width: 300px;
+        }
+        
+        button {
+            padding: 5px 10px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            white-space: nowrap;
+        }
+        
+        button:hover {
+            opacity: 0.9;
+        }
+        
+        button.active {
+            background-color: #FF5722;
+        }
+        
+        .node-type-selector {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        
+        .node-type-btn {
+            flex: 1;
+            padding: 3px;
+            font-size: 12px;
+        }
+        
+        #status {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            font-size: 12px;
+        }
+        
+        /* Resize handle styles */
+        .resize-handle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #FF9800;
+            border-radius: 50%;
+            cursor: nwse-resize;
+            z-index: 5;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .node:hover .resize-handle {
+            opacity: 1;
+        }
+        
+        .resize-handle.bottom-right {
+            right: -5px;
+            bottom: -5px;
+            cursor: se-resize;
+        }
+        
+        /* Category modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            width: 300px;
+            max-width: 90%;
+        }
+        
+        .modal-title {
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        .modal-input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .category-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        
+        .category-item {
+            padding: 5px;
+            margin: 3px 0;
+            background-color: #f9f9f9;
+            border-radius: 3px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .category-item:hover {
+            background-color: #eee;
+        }
+        
+        .category-item.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .delete-category {
+            color: #ff4444;
+            font-weight: bold;
+            padding: 0 5px;
+        }
+        
+        .delete-category:hover {
+            color: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <div id="toolbar">
+        <button id="add-main-node">Add Main Node</button>
+        <button id="add-sub-node">Add Sub Node</button>
+        <button id="delete-node">Delete Node</button>
+        <button id="connect-mode">Connect Nodes</button>
+        <div class="node-type-selector">
+            <button id="set-main" class="node-type-btn">Make Main</button>
+            <button id="set-sub" class="node-type-btn">Make Sub</button>
+        </div>
+        <button id="save-map">Save Map</button>
+        <button id="load-map">Load Map</button>
+        <button id="manage-categories">Manage Categories</button>
+    </div>
+    
+    <div id="status">Ready</div>
+    <div id="mindmap-container"></div>
+
+    <!-- Category Modal -->
+    <div id="category-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="modal-title" id="modal-title">Manage Categories</h3>
+            <div id="category-tabs" style="display: flex; margin-bottom: 15px;">
+                <button id="tab-save" class="active" style="flex: 1;">Save To</button>
+                <button id="tab-load" style="flex: 1;">Load From</button>
+                <button id="tab-manage" style="flex: 1;">Manage</button>
+            </div>
+            
+            <div id="save-section">
+                <input type="text" id="new-map-name" class="modal-input" placeholder="Enter map name">
+                <select id="category-select" class="modal-input">
+                    <option value="">Select category</option>
+                </select>
+                <input type="text" id="new-category-name" class="modal-input" placeholder="Or enter new category name">
+                <div class="modal-buttons">
+                    <button id="cancel-save">Cancel</button>
+                    <button id="confirm-save">Save</button>
+                </div>
+            </div>
+            
+            <div id="load-section" style="display: none;">
+                <select id="load-category-select" class="modal-input">
+                    <option value="">Select category</option>
+                </select>
+                <div class="category-list" id="load-map-list"></div>
+                <div class="modal-buttons">
+                    <button id="cancel-load">Cancel</button>
+                    <button id="confirm-load">Load</button>
+                </div>
+            </div>
+            
+            <div id="manage-section" style="display: none;">
+                <input type="text" id="add-category-input" class="modal-input" placeholder="New category name">
+                <button id="add-category-btn" style="width: 100%; margin-bottom: 15px;">Add Category</button>
+                <div class="category-list" id="category-list"></div>
+                <div class="modal-buttons">
+                    <button id="close-manage">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('mindmap-container');
+            const status = document.getElementById('status');
+            const addMainNodeBtn = document.getElementById('add-main-node');
+            const addSubNodeBtn = document.getElementById('add-sub-node');
+            const deleteNodeBtn = document.getElementById('delete-node');
+            const connectModeBtn = document.getElementById('connect-mode');
+            const setMainBtn = document.getElementById('set-main');
+            const setSubBtn = document.getElementById('set-sub');
+            const saveMapBtn = document.getElementById('save-map');
+            const loadMapBtn = document.getElementById('load-map');
+            const manageCategoriesBtn = document.getElementById('manage-categories');
+            
+            // Modal elements
+            const categoryModal = document.getElementById('category-modal');
+            const saveSection = document.getElementById('save-section');
+            const loadSection = document.getElementById('load-section');
+            const manageSection = document.getElementById('manage-section');
+            const tabSave = document.getElementById('tab-save');
+            const tabLoad = document.getElementById('tab-load');
+            const tabManage = document.getElementById('tab-manage');
+            const categorySelect = document.getElementById('category-select');
+            const newCategoryName = document.getElementById('new-category-name');
+            const newMapName = document.getElementById('new-map-name');
+            const loadCategorySelect = document.getElementById('load-category-select');
+            const loadMapList = document.getElementById('load-map-list');
+            const categoryList = document.getElementById('category-list');
+            const addCategoryInput = document.getElementById('add-category-input');
+            const addCategoryBtn = document.getElementById('add-category-btn');
+            
+            let selectedNode = null;
+            let connectMode = false;
+            let connectionStart = null;
+            let connections = [];
+            let hierarchicalConnections = [];
+            let selectedMapToLoad = null;
+            
+            // Initialize storage structure if not exists
+            if (!localStorage.getItem('mindmapCategories')) {
+                localStorage.setItem('mindmapCategories', JSON.stringify({
+                    categories: {},
+                    lastCategory: null
+                }));
+            }
+            
+            // Update status message
+            function updateStatus(message) {
+                status.textContent = message;
+                setTimeout(() => {
+                    if (status.textContent === message) {
+                        status.textContent = 'Ready';
+                    }
+                }, 3000);
+            }
+            
+            // Add a new node to the mind map
+            function addNode(x, y, isMainNode = true, parentNode = null) {
+                const node = document.createElement('div');
+                node.className = isMainNode ? 'node main-node' : 'node sub-node';
+                node.style.left = `${x}px`;
+                node.style.top = `${y}px`;
+                
+                const content = document.createElement('textarea');
+                content.className = 'node-content';
+                content.placeholder = 'Enter text here...';
+                content.value = isMainNode ? 'Main Idea' : 'Sub Idea';
+                
+                // Add connectors
+                const connectors = ['top', 'right', 'bottom', 'left'].map(pos => {
+                    const connector = document.createElement('div');
+                    connector.className = `connector ${pos}`;
+                    connector.dataset.position = pos;
+                    return connector;
+                });
+                
+                // Add resize handle
+                const resizeHandle = document.createElement('div');
+                resizeHandle.className = 'resize-handle bottom-right';
+                
+                node.append(content, ...connectors, resizeHandle);
+                container.appendChild(node);
+                
+                // Make node draggable
+                makeDraggable(node);
+                
+                // Make node resizable
+                makeResizable(node, resizeHandle);
+                
+                // Add click event to select node
+                node.addEventListener('click', function(e) {
+                    if (e.target === node || node.contains(e.target)) {
+                        selectNode(node);
+                    }
+                });
+                
+                // Add connector click events
+                connectors.forEach(connector => {
+                    connector.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        handleConnectorClick(node, connector);
+                    });
+                });
+                
+                // If this is a sub-node with a parent, create hierarchical connection
+                if (parentNode && !isMainNode) {
+                    createHierarchicalConnection(parentNode, node);
+                }
+                
+                return node;
+            }
+            
+            // Make a node draggable
+            function makeDraggable(node) {
+                let isDragging = false;
+                let offsetX, offsetY;
+                
+                node.addEventListener('mousedown', function(e) {
+                    // Don't start drag if clicking on connector, resize handle or textarea
+                    if (e.target.classList.contains('connector') || 
+                        e.target.classList.contains('resize-handle') || 
+                        e.target.classList.contains('node-content')) {
+                        return;
+                    }
+                    
+                    isDragging = true;
+                    offsetX = e.clientX - node.getBoundingClientRect().left;
+                    offsetY = e.clientY - node.getBoundingClientRect().top;
+                    selectNode(node);
+                    e.preventDefault();
+                });
+                
+                document.addEventListener('mousemove', function(e) {
+                    if (!isDragging) return;
+                    
+                    const x = e.clientX - offsetX - container.getBoundingClientRect().left;
+                    const y = e.clientY - offsetY - container.getBoundingClientRect().top;
+                    
+                    node.style.left = `${x}px`;
+                    node.style.top = `${y}px`;
+                    
+                    // Update connections for this node
+                    updateConnections(node);
+                    updateHierarchicalConnections(node);
+                });
+                
+                document.addEventListener('mouseup', function() {
+                    isDragging = false;
+                });
+            }
+            
+            // Make a node resizable
+            function makeResizable(node, handle) {
+                let isResizing = false;
+                let startX, startY, startWidth, startHeight;
+                
+                handle.addEventListener('mousedown', function(e) {
+                    isResizing = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    startWidth = parseInt(document.defaultView.getComputedStyle(node).width, 10);
+                    startHeight = parseInt(document.defaultView.getComputedStyle(node).height, 10);
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+                
+                document.addEventListener('mousemove', function(e) {
+                    if (!isResizing) return;
+                    
+                    const width = startWidth + e.clientX - startX;
+                    const height = startHeight + e.clientY - startY;
+                    
+                    // Set minimum size
+                    const minWidth = node.classList.contains('main-node') ? 120 : 100;
+                    const minHeight = node.classList.contains('main-node') ? 60 : 50;
+                    
+                    node.style.width = Math.max(width, minWidth) + 'px';
+                    node.style.height = Math.max(height, minHeight) + 'px';
+                    
+                    // Update connections
+                    updateConnections(node);
+                    updateHierarchicalConnections(node);
+                });
+                
+                document.addEventListener('mouseup', function() {
+                    isResizing = false;
+                });
+            }
+            
+            // Select a node
+            function selectNode(node) {
+                if (selectedNode) {
+                    selectedNode.classList.remove('selected');
+                }
+                selectedNode = node;
+                if (node) {
+                    node.classList.add('selected');
+                    updateStatus(`Selected ${node.classList.contains('main-node') ? 'Main' : 'Sub'} Node`);
+                }
+            }
+            
+            // Handle connector clicks
+            function handleConnectorClick(node, connector) {
+                if (connectMode) {
+                    if (!connectionStart) {
+                        connectionStart = { node, connector };
+                        connector.style.backgroundColor = '#FF5722';
+                        updateStatus(`Select target node for connection from ${node.querySelector('.node-content').value || 'node'}`);
+                    } else {
+                        // Create connection between two nodes
+                        createConnection(connectionStart.node, connectionStart.connector, node, connector);
+                        
+                        // Reset connection mode
+                        connectionStart.connector.style.backgroundColor = '#FF9800';
+                        connectionStart = null;
+                        connectMode = false;
+                        connectModeBtn.classList.remove('active');
+                        updateStatus('Connection created');
+                    }
+                }
+            }
+            
+            // Create a connection between two nodes
+            function createConnection(node1, connector1, node2, connector2) {
+                const line = document.createElement('div');
+                line.className = 'connection';
+                
+                // Add arrow at the end
+                const arrow = document.createElement('div');
+                arrow.className = 'arrow';
+                line.appendChild(arrow);
+                
+                container.appendChild(line);
+                
+                const updateLine = () => {
+                    const rect1 = node1.getBoundingClientRect();
+                    const rect2 = node2.getBoundingClientRect();
+                    const containerRect = container.getBoundingClientRect();
+                    
+                    const pos1 = getConnectorPosition(rect1, connector1.dataset.position);
+                    const pos2 = getConnectorPosition(rect2, connector2.dataset.position);
+                    
+                    const x1 = pos1.x - containerRect.left;
+                    const y1 = pos1.y - containerRect.top;
+                    const x2 = pos2.x - containerRect.left;
+                    const y2 = pos2.y - containerRect.top;
+                    
+                    const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                    const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+                    
+                    line.style.width = `${length}px`;
+                    line.style.left = `${x1}px`;
+                    line.style.top = `${y1}px`;
+                    line.style.transformOrigin = '0 0';
+                    line.style.transform = `rotate(${angle}deg)`;
+                    line.style.borderTop = '2px solid #FF5722';
+                    
+                    // Position the arrow at the end
+                    arrow.style.transform = `rotate(${angle + 45}deg)`;
+                };
+                
+                updateLine();
+                
+                // Store connection data
+                connections.push({
+                    node1, connector1, 
+                    node2, connector2, 
+                    line,
+                    update: updateLine
+                });
+            }
+            
+            // Create hierarchical connection (parent-child relationship)
+            function createHierarchicalConnection(parentNode, childNode) {
+                const line = document.createElement('div');
+                line.className = 'hierarchical-connection';
+                container.appendChild(line);
+                
+                // Make sure hierarchical connections are behind regular ones
+                line.style.zIndex = '0';
+                
+                const updateLine = () => {
+                    const parentRect = parentNode.getBoundingClientRect();
+                    const childRect = childNode.getBoundingClientRect();
+                    const containerRect = container.getBoundingClientRect();
+                    
+                    const parentCenterX = parentRect.left + parentRect.width / 2 - containerRect.left;
+                    const parentBottom = parentRect.bottom - containerRect.top;
+                    const childCenterX = childRect.left + childRect.width / 2 - containerRect.left;
+                    const childTop = childRect.top - containerRect.top;
+                    
+                    // Calculate connection points
+                    const startX = parentCenterX;
+                    const startY = parentBottom;
+                    const endX = childCenterX;
+                    const endY = childTop;
+                    
+                    // Calculate line length and angle
+                    const length = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+                    const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
+                    
+                    line.style.width = `${length}px`;
+                    line.style.left = `${startX}px`;
+                    line.style.top = `${startY}px`;
+                    line.style.transformOrigin = '0 0';
+                    line.style.transform = `rotate(${angle}deg)`;
+                };
+                
+                updateLine();
+                
+                // Store hierarchical connection data
+                hierarchicalConnections.push({
+                    parent: parentNode,
+                    child: childNode,
+                    line,
+                    update: updateLine
+                });
+            }
+            
+            // Get connector position
+            function getConnectorPosition(rect, position) {
+                switch(position) {
+                    case 'top': return { x: rect.left + rect.width / 2, y: rect.top };
+                    case 'right': return { x: rect.right, y: rect.top + rect.height / 2 };
+                    case 'bottom': return { x: rect.left + rect.width / 2, y: rect.bottom };
+                    case 'left': return { x: rect.left, y: rect.top + rect.height / 2 };
+                }
+            }
+            
+            // Update all connections for a node
+            function updateConnections(node) {
+                connections.forEach(conn => {
+                    if (conn.node1 === node || conn.node2 === node) {
+                        conn.update();
+                    }
+                });
+            }
+            
+            // Update all hierarchical connections for a node
+            function updateHierarchicalConnections(node) {
+                hierarchicalConnections.forEach(conn => {
+                    if (conn.parent === node || conn.child === node) {
+                        conn.update();
+                    }
+                });
+            }
+            
+            // Delete selected node
+            function deleteSelectedNode() {
+                if (!selectedNode) {
+                    updateStatus('No node selected to delete');
+                    return;
+                }
+                
+                // Remove connections involving this node
+                connections = connections.filter(conn => {
+                    if (conn.node1 === selectedNode || conn.node2 === selectedNode) {
+                        container.removeChild(conn.line);
+                        return false;
+                    }
+                    return true;
+                });
+                
+                // Remove hierarchical connections involving this node
+                hierarchicalConnections = hierarchicalConnections.filter(conn => {
+                    if (conn.parent === selectedNode || conn.child === selectedNode) {
+                        container.removeChild(conn.line);
+                        return false;
+                    }
+                    return true;
+                });
+                
+                container.removeChild(selectedNode);
+                selectedNode = null;
+                updateStatus('Node deleted');
+            }
+            
+            // Change node type
+            function changeNodeType(isMain) {
+                if (!selectedNode) {
+                    updateStatus('No node selected to change type');
+                    return;
+                }
+                
+                selectedNode.className = isMain ? 'node main-node' : 'node sub-node';
+                selectedNode.querySelector('.node-content').value = isMain ? 'Main Idea' : 'Sub Idea';
+                
+                // Update minimum size based on type
+                if (isMain) {
+                    selectedNode.style.width = Math.max(parseInt(selectedNode.style.width || '120'), 120) + 'px';
+                    selectedNode.style.height = Math.max(parseInt(selectedNode.style.height || '60'), 60) + 'px';
+                } else {
+                    selectedNode.style.width = Math.max(parseInt(selectedNode.style.width || '100'), 100) + 'px';
+                    selectedNode.style.height = Math.max(parseInt(selectedNode.style.height || '50'), 50) + 'px';
+                }
+                
+                updateStatus(`Changed to ${isMain ? 'Main' : 'Sub'} Node`);
+            }
+            
+            // Get current mind map data
+            function getCurrentMapData() {
+                const nodes = Array.from(document.querySelectorAll('.node')).map(node => {
+                    return {
+                        id: node.dataset.id || (node.dataset.id = Math.random().toString(36).substr(2, 9)),
+                        x: parseInt(node.style.left),
+                        y: parseInt(node.style.top),
+                        width: parseInt(node.style.width),
+                        height: parseInt(node.style.height),
+                        content: node.querySelector('.node-content').value,
+                        isMain: node.classList.contains('main-node')
+                    };
+                });
+                
+                const conns = connections.map(conn => {
+                    return {
+                        node1Id: conn.node1.dataset.id,
+                        connector1Pos: conn.connector1.dataset.position,
+                        node2Id: conn.node2.dataset.id,
+                        connector2Pos: conn.connector2.dataset.position
+                    };
+                });
+                
+                const hierarchicalConns = hierarchicalConnections.map(conn => {
+                    return {
+                        parentId: conn.parent.dataset.id,
+                        childId: conn.child.dataset.id
+                    };
+                });
+                
+                return { 
+                    nodes, 
+                    connections: conns,
+                    hierarchicalConnections: hierarchicalConns
+                };
+            }
+            
+            // Save mind map to a category
+            function saveToCategory(category, mapName, mapData) {
+                const storage = JSON.parse(localStorage.getItem('mindmapCategories'));
+                
+                // Create category if it doesn't exist
+                if (!storage.categories[category]) {
+                    storage.categories[category] = {};
+                }
+                
+                // Save the map
+                storage.categories[category][mapName] = mapData;
+                storage.lastCategory = category;
+                
+                localStorage.setItem('mindmapCategories', JSON.stringify(storage));
+                updateStatus(`Map "${mapName}" saved to category "${category}"`);
+            }
+            
+            // Load mind map from a category
+            function loadFromCategory(category, mapName) {
+                const storage = JSON.parse(localStorage.getItem('mindmapCategories'));
+                
+                if (!storage.categories[category] || !storage.categories[category][mapName]) {
+                    updateStatus('Map not found');
+                    return;
+                }
+                
+                const mapData = storage.categories[category][mapName];
+                
+                // Clear current mind map
+                container.innerHTML = '';
+                connections = [];
+                hierarchicalConnections = [];
+                selectedNode = null;
+                
+                const { nodes, connections: conns, hierarchicalConnections: hConns } = mapData;
+                const nodeMap = {};
+                
+                // Create nodes
+                nodes.forEach(nodeData => {
+                    const node = addNode(nodeData.x, nodeData.y, nodeData.isMain);
+                    node.dataset.id = nodeData.id;
+                    node.style.width = nodeData.width + 'px';
+                    node.style.height = nodeData.height + 'px';
+                    node.querySelector('.node-content').value = nodeData.content;
+                    nodeMap[nodeData.id] = node;
+                });
+                
+                // Create regular connections
+                conns.forEach(connData => {
+                    const node1 = nodeMap[connData.node1Id];
+                    const node2 = nodeMap[connData.node2Id];
+                    
+                    if (node1 && node2) {
+                        const connector1 = node1.querySelector(`.connector.${connData.connector1Pos}`);
+                        const connector2 = node2.querySelector(`.connector.${connData.connector2Pos}`);
+                        
+                        if (connector1 && connector2) {
+                            createConnection(node1, connector1, node2, connector2);
+                        }
+                    }
+                });
+                
+                // Create hierarchical connections
+                if (hConns) {
+                    hConns.forEach(connData => {
+                        const parent = nodeMap[connData.parentId];
+                        const child = nodeMap[connData.childId];
+                        
+                        if (parent && child) {
+                            createHierarchicalConnection(parent, child);
+                        }
+                    });
+                }
+                
+                updateStatus(`Map "${mapName}" loaded from category "${category}"`);
+            }
+            
+            // Get all categories
+            function getAllCategories() {
+                const storage = JSON.parse(localStorage.getItem('mindmapCategories'));
+                return Object.keys(storage.categories);
+            }
+            
+            // Get all maps in a category
+            function getMapsInCategory(category) {
+                const storage = JSON.parse(localStorage.getItem('mindmapCategories'));
+                if (!storage.categories[category]) return [];
+                return Object.keys(storage.categories[category]);
+            }
+            
+            // Add a new category
+            function addCategory(name) {
+                const storage = JSON.parse(localStorage.getItem('mindmapCategories'));
+                
+                if (storage.categories[name]) {
+                    return false; // Category already exists
+                }
+                
+                storage.categories[name] = {};
+                localStorage.setItem('mindmapCategories', JSON.stringify(storage));
+                return true;
+            }
+            
+            // Delete a category
+            function deleteCategory(name) {
+                const storage = JSON.parse(localStorage.getItem('mindmapCategories'));
+                
+                if (!storage.categories[name]) {
+                    return false; // Category doesn't exist
+                }
+                
+                delete storage.categories[name];
+                
+                // If deleted category was the last used, clear lastCategory
+                if (storage.lastCategory === name) {
+                    storage.lastCategory = null;
+                }
+                
+                localStorage.setItem('mindmapCategories', JSON.stringify(storage));
+                return true;
+            }
+            
+            // Populate category select dropdown
+            function populateCategorySelect(selectElement, includeEmptyOption = true) {
+                const categories = getAllCategories();
+                selectElement.innerHTML = includeEmptyOption ? '<option value="">Select category</option>' : '';
+                
+                categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category;
+                    selectElement.appendChild(option);
+                });
+            }
+            
+            // Populate map list for a category
+            function populateMapList(category) {
+                loadMapList.innerHTML = '';
+                
+                if (!category) return;
+                
+                const maps = getMapsInCategory(category);
+                
+                if (maps.length === 0) {
+                    const item = document.createElement('div');
+                    item.className = 'category-item';
+                    item.textContent = 'No maps in this category';
+                    loadMapList.appendChild(item);
+                    return;
+                }
+                
+                maps.forEach(map => {
+                    const item = document.createElement('div');
+                    item.className = 'category-item';
+                    item.textContent = map;
+                    item.dataset.mapName = map;
+                    
+                    item.addEventListener('click', function() {
+                        // Remove active class from all items
+                        document.querySelectorAll('#load-map-list .category-item').forEach(el => {
+                            el.classList.remove('active');
+                        });
+                        
+                        // Add active class to clicked item
+                        this.classList.add('active');
+                        selectedMapToLoad = this.dataset.mapName;
+                    });
+                    
+                    loadMapList.appendChild(item);
+                });
+            }
+            
+            // Show modal
+            function showModal(section) {
+                // Reset modal
+                saveSection.style.display = 'none';
+                loadSection.style.display = 'none';
+                manageSection.style.display = 'none';
+                tabSave.classList.remove('active');
+                tabLoad.classList.remove('active');
+                tabManage.classList.remove('active');
+                
+                // Show requested section
+                if (section === 'save') {
+                    saveSection.style.display = 'block';
+                    tabSave.classList.add('active');
+                    populateCategorySelect(categorySelect);
+                    newMapName.value = '';
+                    newCategoryName.value = '';
+                } else if (section === 'load') {
+                    loadSection.style.display = 'block';
+                    tabLoad.classList.add('active');
+                    populateCategorySelect(loadCategorySelect);
+                    selectedMapToLoad = null;
+                } else if (section === 'manage') {
+                    manageSection.style.display = 'block';
+                    tabManage.classList.add('active');
+                    renderCategoryList();
+                    addCategoryInput.value = '';
+                }
+                
+                categoryModal.style.display = 'flex';
+            }
+            
+            // Hide modal
+            function hideModal() {
+                categoryModal.style.display = 'none';
+            }
+            
+            // Render category list in manage section
+            function renderCategoryList() {
+                const categories = getAllCategories();
+                categoryList.innerHTML = '';
+                
+                if (categories.length === 0) {
+                    const item = document.createElement('div');
+                    item.className = 'category-item';
+                    item.textContent = 'No categories yet';
+                    categoryList.appendChild(item);
+                    return;
+                }
+                
+                categories.forEach(category => {
+                    const item = document.createElement('div');
+                    item.className = 'category-item';
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.textContent = category;
+                    
+                    const deleteBtn = document.createElement('span');
+                    deleteBtn.className = 'delete-category';
+                    deleteBtn.textContent = '×';
+                    deleteBtn.title = 'Delete category';
+                    
+                    deleteBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        if (confirm(`Delete category "${category}" and all its maps?`)) {
+                            if (deleteCategory(category)) {
+                                renderCategoryList();
+                                // Also update other dropdowns
+                                populateCategorySelect(categorySelect);
+                                populateCategorySelect(loadCategorySelect);
+                            }
+                        }
+                    });
+                    
+                    item.appendChild(nameSpan);
+                    item.appendChild(deleteBtn);
+                    categoryList.appendChild(item);
+                });
+            }
+            
+            // Event listeners for toolbar buttons
+            addMainNodeBtn.addEventListener('click', function() {
+                const x = container.clientWidth / 2 - 60;
+                const y = container.clientHeight / 2 - 30;
+                addNode(x, y, true);
+                updateStatus('Main node added');
+            });
+            
+            addSubNodeBtn.addEventListener('click', function() {
+                if (selectedNode) {
+                    const rect = selectedNode.getBoundingClientRect();
+                    const containerRect = container.getBoundingClientRect();
+                    const x = rect.left - containerRect.left + rect.width + 20;
+                    const y = rect.top - containerRect.top;
+                    addNode(x, y, false, selectedNode);
+                    updateStatus('Sub node added with hierarchical connection');
+                } else {
+                    updateStatus('Select a node first to add a sub node');
+                }
+            });
+            
+            deleteNodeBtn.addEventListener('click', deleteSelectedNode);
+            
+            connectModeBtn.addEventListener('click', function() {
+                connectMode = !connectMode;
+                if (connectMode) {
+                    connectModeBtn.classList.add('active');
+                    updateStatus('Connect mode: Select source node connector');
+                } else {
+                    connectModeBtn.classList.remove('active');
+                    if (connectionStart) {
+                        connectionStart.connector.style.backgroundColor = '#FF9800';
+                        connectionStart = null;
+                    }
+                    updateStatus('Connect mode canceled');
+                }
+            });
+            
+            setMainBtn.addEventListener('click', () => changeNodeType(true));
+            setSubBtn.addEventListener('click', () => changeNodeType(false));
+            
+            saveMapBtn.addEventListener('click', function() {
+                showModal('save');
+            });
+            
+            loadMapBtn.addEventListener('click', function() {
+                showModal('load');
+            });
+            
+            manageCategoriesBtn.addEventListener('click', function() {
+                showModal('manage');
+            });
+            
+            // Modal tab event listeners
+            tabSave.addEventListener('click', function() {
+                showModal('save');
+            });
+            
+            tabLoad.addEventListener('click', function() {
+                showModal('load');
+            });
+            
+            tabManage.addEventListener('click', function() {
+                showModal('manage');
+            });
+            
+            // Save modal event listeners
+            document.getElementById('cancel-save').addEventListener('click', hideModal);
+            
+            document.getElementById('confirm-save').addEventListener('click', function() {
+                const mapName = newMapName.value.trim();
+                let category = categorySelect.value;
+                
+                // If category is empty but new category name is provided
+                if (!category && newCategoryName.value.trim()) {
+                    category = newCategoryName.value.trim();
+                    
+                    // Add new category
+                    if (!addCategory(category)) {
+                        alert('Category already exists');
+                        return;
+                    }
+                }
+                
+                if (!mapName || !category) {
+                    alert('Please enter both a map name and select/create a category');
+                    return;
+                }
+                
+                const mapData = getCurrentMapData();
+                saveToCategory(category, mapName, mapData);
+                hideModal();
+            });
+            
+            // Load modal event listeners
+            document.getElementById('cancel-load').addEventListener('click', hideModal);
+            
+            document.getElementById('confirm-load').addEventListener('click', function() {
+                const category = loadCategorySelect.value;
+                
+                if (!category || !selectedMapToLoad) {
+                    alert('Please select both a category and a map to load');
+                    return;
+                }
+                
+                loadFromCategory(category, selectedMapToLoad);
+                hideModal();
+            });
+            
+            loadCategorySelect.addEventListener('change', function() {
+                populateMapList(this.value);
+            });
+            
+            // Manage modal event listeners
+            document.getElementById('close-manage').addEventListener('click', hideModal);
+            
+            addCategoryBtn.addEventListener('click', function() {
+                const categoryName = addCategoryInput.value.trim();
+                
+                if (!categoryName) {
+                    alert('Please enter a category name');
+                    return;
+                }
+                
+                if (addCategory(categoryName)) {
+                    addCategoryInput.value = '';
+                    renderCategoryList();
+                    // Also update other dropdowns
+                    populateCategorySelect(categorySelect);
+                    populateCategorySelect(loadCategorySelect);
+                } else {
+                    alert('Category already exists');
+                }
+            });
+            
+            // Add initial node
+            addNode(100, 100, true);
+            updateStatus('Ready - Add nodes and connect them');
+        });
+    </script>
+</body>
+</html>

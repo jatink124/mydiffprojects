@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Dev Planner | Project Management</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-light: #4895ef;
+            --secondary: #3f37c9;
+            --dark: #1a1a2e;
+            --light: #f8f9fa;
+            --success: #4cc9f0;
+            --warning: #f72585;
+            --danger: #ef233c;
+            --gray: #adb5bd;
+            --gray-light: #e9ecef;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background-color: #f5f7ff;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        .header-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .header-title i {
+            color: var(--primary);
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+        
+        /* Main Layout */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 25px;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            height: fit-content;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+        }
+        
+        .sidebar-item {
+            margin-bottom: 10px;
+            position: relative;
+        }
+        
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            border-radius: 8px;
+            color: var(--dark);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        
+        .sidebar-link:hover, .sidebar-link.active {
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--primary);
+        }
+        
+        .sidebar-link i {
+            width: 20px;
+            text-align: center;
+        }
+        
+        /* Content */
+        .content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+        
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            position: relative;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--gray-light);
+        }
+        
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .card-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        /* Project Cards */
+        .project-card {
+            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            background: var(--light);
+            border-left: 4px solid var(--primary);
+            transition: transform 0.2s ease;
+            position: relative;
+        }
+        
+        .project-card:hover {
+            transform: translateY(-3px);
+        }
+        
+        .project-category {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        
+        .project-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .project-description {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        /* Progress */
+        .progress-container {
+            margin: 15px 0;
+        }
+        
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: var(--gray-light);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--primary-light));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        /* Tasks */
+        .task-list {
+            list-style: none;
+        }
+        
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--gray-light);
+            position: relative;
+        }
+        
+        .task-item:last-child {
+            border-bottom: none;
+        }
+        
+        .task-checkbox {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--gray);
+            border-radius: 4px;
+            margin-right: 12px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        
+        .task-checkbox:checked {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .task-checkbox:checked::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            color: white;
+            font-size: 10px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .task-label {
+            flex: 1;
+            cursor: pointer;
+        }
+        
+        .task-checkbox:checked + .task-label {
+            color: var(--gray);
+            text-decoration: line-through;
+        }
+        
+        .task-actions {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        .task-item:hover .task-actions {
+            opacity: 1;
+        }
+        
+        /* Video Demo */
+        .video-demo {
+            background: rgba(67, 97, 238, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .video-demo-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            position: relative;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--secondary);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--gray);
+            color: var(--dark);
+        }
+        
+        .btn-outline:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+        
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border-radius: 50%;
+        }
+        
+        /* Forms */
+        .form-group {
+            margin-bottom: 15px;
+            position: relative;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--gray-light);
+            border-radius: 8px;
+            font-family: inherit;
+            transition: border-color 0.2s ease;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        select.form-control {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 16px;
+        }
+        
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .badge-primary {
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--primary);
+        }
+        
+        /* Tooltips */
+        [data-tooltip] {
+            position: relative;
+            cursor: help;
+        }
+        
+        [data-tooltip]:hover::before {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--dark);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            z-index: 100;
+            margin-bottom: 8px;
+        }
+        
+        [data-tooltip]:hover::after {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 5px;
+            border-style: solid;
+            border-color: var(--dark) transparent transparent transparent;
+            margin-bottom: 3px;
+        }
+        
+        /* Utility Classes */
+        .mt-3 { margin-top: 15px; }
+        .mb-3 { margin-bottom: 15px; }
+        .text-muted { color: var(--gray); }
+        
+        /* Responsive */
+        @media (max-width: 992px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="header-title" data-tooltip="Main dashboard showing all your projects and tasks">
+                <i class="fas fa-code"></i>
+                Web Development Planner
+            </h1>
+            <div class="header-actions">
+                <button class="btn btn-outline" data-tooltip="View notifications and alerts">
+                    <i class="fas fa-bell"></i>
+                </button>
+                <button class="btn btn-primary" data-tooltip="Create a new project">
+                    <i class="fas fa-plus"></i> New Project
+                </button>
+            </div>
+        </header>
+        
+        <div class="main-layout">
+            <aside class="sidebar">
+                <ul class="sidebar-menu">
+                    <li class="sidebar-item">
+                        <a href="#" class="sidebar-link active" data-tooltip="Main dashboard with overview">
+                            <i class="fas fa-home"></i>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="#" class="sidebar-link" data-tooltip="View and manage all your projects">
+                            <i class="fas fa-project-diagram"></i>
+                            Projects
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="#" class="sidebar-link" data-tooltip="Track your learning and development tasks">
+                            <i class="fas fa-tasks"></i>
+                            Tasks
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="#" class="sidebar-link" data-tooltip="Plan and organize video demonstrations">
+                            <i class="fas fa-video"></i>
+                            Video Demos
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="#" class="sidebar-link" data-tooltip="Schedule deadlines and milestones">
+                            <i class="fas fa-calendar-alt"></i>
+                            Calendar
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="#" class="sidebar-link" data-tooltip="Configure application preferences">
+                            <i class="fas fa-cog"></i>
+                            Settings
+                        </a>
+                    </li>
+                </ul>
+            </aside>
+            
+            <main class="content">
+                <!-- Projects Section -->
+                <section class="card" data-tooltip="Track and manage your current web development projects">
+                    <div class="card-header">
+                        <h2 class="card-title">Current Projects</h2>
+                        <div class="card-actions">
+                            <button class="btn btn-outline btn-sm" data-tooltip="Filter projects by category or status">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- E-commerce Project -->
+                    <div class="project-card" data-tooltip="E-commerce project: Online Bookstore">
+                        <span class="project-category">E-commerce Website</span>
+                        <h3 class="project-name">Online Bookstore</h3>
+                        <p class="project-description">Build a responsive bookstore with cart functionality and payment integration.</p>
+                        
+                        <div class="progress-container" data-tooltip="Project completion progress: 45%">
+                            <div class="progress-info">
+                                <span>Progress</span>
+                                <span>45%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress" style="width: 45%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="video-demo" data-tooltip="Plan for demonstrating this project in a video">
+                            <div class="video-demo-title">
+                                <i class="fas fa-video"></i> Video Demo Plan
+                            </div>
+                            <p>Show product filtering and checkout process with Stripe integration.</p>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-outline btn-sm" data-tooltip="Edit project details">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="btn btn-outline btn-sm" data-tooltip="View project analytics">
+                                <i class="fas fa-chart-line"></i> Analytics
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Hospitality Project -->
+                    <div class="project-card" data-tooltip="Hospitality project: Hotel Booking System">
+                        <span class="project-category">Hospitality Website</span>
+                        <h3 class="project-name">Hotel Booking System</h3>
+                        <p class="project-description">Create a booking platform with calendar integration and admin dashboard.</p>
+                        
+                        <div class="progress-container" data-tooltip="Project completion progress: 20%">
+                            <div class="progress-info">
+                                <span>Progress</span>
+                                <span>20%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress" style="width: 20%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="video-demo" data-tooltip="Plan for demonstrating this project in a video">
+                            <div class="video-demo-title">
+                                <i class="fas fa-video"></i> Video Demo Plan
+                            </div>
+                            <p>Demonstrate room selection, date picking, and reservation flow.</p>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-outline btn-sm" data-tooltip="Edit project details">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="btn btn-outline btn-sm" data-tooltip="View project analytics">
+                                <i class="fas fa-chart-line"></i> Analytics
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Portfolio Project -->
+                    <div class="project-card" data-tooltip="Portfolio project: Web Dev Portfolio">
+                        <span class="project-category">Portfolio Website</span>
+                        <h3 class="project-name">My Web Dev Portfolio</h3>
+                        <p class="project-description">Showcase all completed projects with detailed case studies.</p>
+                        
+                        <div class="progress-container" data-tooltip="Project completion progress: 75%">
+                            <div class="progress-info">
+                                <span>Progress</span>
+                                <span>75%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress" style="width: 75%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-outline btn-sm" data-tooltip="Edit project details">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="btn btn-outline btn-sm" data-tooltip="View project analytics">
+                                <i class="fas fa-chart-line"></i> Analytics
+                            </button>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Tasks Section -->
+                <section class="card" data-tooltip="Manage your learning and development tasks">
+                    <div class="card-header">
+                        <h2 class="card-title">Learning Tasks</h2>
+                        <div class="card-actions">
+                            <button class="btn btn-outline btn-sm" data-tooltip="Add a new learning task">
+                                <i class="fas fa-plus"></i> Add
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <ul class="task-list">
+                        <li class="task-item" data-tooltip="Task: Learn video editing for demos">
+                            <input type="checkbox" id="task1" class="task-checkbox">
+                            <label for="task1" class="task-label">Learn video editing for demos using Premiere Pro</label>
+                            <div class="task-actions">
+                                <button class="btn btn-icon btn-outline btn-sm" data-tooltip="Task options">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                            </div>
+                        </li>
+                        <li class="task-item" data-tooltip="Completed task: Research e-commerce templates">
+                            <input type="checkbox" id="task2" class="task-checkbox" checked>
+                            <label for="task2" class="task-label">Research e-commerce templates and best practices</label>
+                            <div class="task-actions">
+                                <button class="btn btn-icon btn-outline btn-sm" data-tooltip="Task options">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                            </div>
+                        </li>
+                        <li class="task-item" data-tooltip="Task: Practice responsive design">
+                            <input type="checkbox" id="task3" class="task-checkbox">
+                            <label for="task3" class="task-label">Practice advanced responsive design techniques</label>
+                            <div class="task-actions">
+                                <button class="btn btn-icon btn-outline btn-sm" data-tooltip="Task options">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                            </div>
+                        </li>
+                        <li class="task-item" data-tooltip="Task: Create video script">
+                            <input type="checkbox" id="task4" class="task-checkbox">
+                            <label for="task4" class="task-label">Create video script for hotel booking demo</label>
+                            <div class="task-actions">
+                                <button class="btn btn-icon btn-outline btn-sm" data-tooltip="Task options">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                            </div>
+                        </li>
+                        <li class="task-item" data-tooltip="Task: Study authentication systems">
+                            <input type="checkbox" id="task5" class="task-checkbox">
+                            <label for="task5" class="task-label">Study authentication systems (OAuth, JWT)</label>
+                            <div class="task-actions">
+                                <button class="btn btn-icon btn-outline btn-sm" data-tooltip="Task options">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                            </div>
+                        </li>
+                    </ul>
+                    
+                    <div class="form-group mt-3" data-tooltip="Add a new learning task">
+                        <input type="text" class="form-control" placeholder="Add new task...">
+                    </div>
+                </section>
+                
+                <!-- Video Demos Section -->
+                <section class="card" data-tooltip="Plan and organize your project demonstration videos">
+                    <div class="card-header">
+                        <h2 class="card-title">Video Demo Planner</h2>
+                        <div class="card-actions">
+                            <button class="btn btn-outline btn-sm" data-tooltip="Create a new video demo plan">
+                                <i class="fas fa-plus"></i> New
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- E-commerce Demo -->
+                    <div class="project-card" data-tooltip="Video demo plan for E-commerce project">
+                        <h3 class="project-name">E-commerce Demo</h3>
+                        <span class="badge badge-primary">In Progress</span>
+                        
+                        <div class="mt-3">
+                            <h4 class="text-muted">Script Outline:</h4>
+                            <ol class="mt-3" style="padding-left: 20px;">
+                                <li data-tooltip="Brief introduction to the project">Introduction (10 sec)</li>
+                                <li data-tooltip="Show main features of homepage">Homepage walkthrough (30 sec)</li>
+                                <li data-tooltip="Demonstrate product page functionality">Product page features (45 sec)</li>
+                                <li data-tooltip="Show checkout process">Checkout process (45 sec)</li>
+                                <li data-tooltip="Wrap up and call to action">Conclusion (20 sec)</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="progress-container mt-3" data-tooltip="Total estimated video duration">
+                            <div class="progress-info">
+                                <span>Estimated Duration</span>
+                                <span>3 minutes</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-outline btn-sm" data-tooltip="Preview video script">
+                                <i class="fas fa-play"></i> Preview
+                            </button>
+                            <button class="btn btn-outline btn-sm" data-tooltip="Edit video script">
+                                <i class="fas fa-edit"></i> Edit Script
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Portfolio Demo -->
+                    <div class="project-card mt-3" data-tooltip="Video demo plan for Portfolio project">
+                        <h3 class="project-name">Portfolio Demo</h3>
+                        <span class="badge badge-primary">Planned</span>
+                        
+                        <div class="mt-3">
+                            <h4 class="text-muted">Script Outline:</h4>
+                            <ol class="mt-3" style="padding-left: 20px;">
+                                <li data-tooltip="Brief introduction to the portfolio">Introduction (10 sec)</li>
+                                <li data-tooltip="Show main layout and navigation">Main layout (30 sec)</li>
+                                <li data-tooltip="Highlight key projects">Project showcase (60 sec)</li>
+                                <li data-tooltip="Demonstrate contact functionality">Contact section (20 sec)</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="progress-container mt-3" data-tooltip="Total estimated video duration">
+                            <div class="progress-info">
+                                <span>Estimated Duration</span>
+                                <span>2 minutes</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-outline btn-sm" data-tooltip="Preview video script">
+                                <i class="fas fa-play"></i> Preview
+                            </button>
+                            <button class="btn btn-outline btn-sm" data-tooltip="Edit video script">
+                                <i class="fas fa-edit"></i> Edit Script
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+</body>
+</html>

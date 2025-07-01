@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Website Builder</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            height: 100vh;
+            overflow: hidden; /* Hide scrollbars for the main body */
+        }
+        #left-panel {
+            min-width: 300px;
+            max-width: 300px;
+            background-color: #ffffff;
+            padding: 1rem;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+            overflow-y: auto; /* Scroll for components */
+            display: flex;
+            flex-direction: column;
+        }
+        #right-panel {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #e2e8f0;
+            overflow: hidden; /* Hide scrollbars for the main right panel */
+        }
+        #canvas-wrapper {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto; /* Scroll for the canvas content */
+            border: 2px dashed #cbd5e1;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center; /* Center dropped components horizontally */
+            position: relative; /* For toolbar positioning */
+        }
+        .component-card, .template-card {
+            cursor: grab;
+            transition: transform 0.1s ease-in-out;
+        }
+        .component-card:active, .template-card:active {
+            cursor: grabbing;
+            transform: scale(0.98);
+        }
+        .component-card:hover, .template-card:hover {
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Basic styling for contenteditable elements */
+        [contenteditable="true"] {
+            outline: 2px solid #3b82f6; /* Blue border when editable */
+            border-radius: 0.375rem; /* rounded-md */
+            padding: 0.25rem 0.5rem; /* px-2 py-1 */
+            transition: all 0.1s ease-in-out;
+            min-width: 50px; /* Ensure editable areas are visible */
+            display: inline-block; /* Allow padding */
+        }
+        [contenteditable="true"]:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        [contenteditable="true"]:focus {
+            background-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); /* Ring focus */
+        }
+        .active-component {
+            box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.5); /* Green highlight for active component */
+            position: relative;
+        }
+        #editor-toolbar {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #334155; /* slate-700 */
+            color: #ffffff;
+            padding: 0.75rem;
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: none; /* Hidden by default */
+            z-index: 10;
+        }
+        #editor-toolbar button {
+            background-color: #4f46e5; /* indigo-600 */
+            color: white;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
+            transition: background-color 0.2s;
+        }
+        #editor-toolbar button:hover {
+            background-color: #4338ca; /* indigo-700 */
+        }
+        #editor-toolbar input[type="color"] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            border: none;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            border-radius: 0.375rem;
+            overflow: hidden;
+            padding: 0;
+            background-color: transparent;
+        }
+        #editor-toolbar input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        #editor-toolbar input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 0.375rem;
+        }
+        #editor-toolbar input[type="color"]::-moz-color-swatch-wrapper {
+            padding: 0;
+        }
+        #editor-toolbar input[type="color"]::-moz-color-swatch {
+            border: none;
+            border-radius: 0.375rem;
+        }
+
+    </style>
+</head>
+<body class="bg-gray-100 font-inter">
+
+    <div id="left-panel" class="flex flex-col bg-white p-4 shadow-lg rounded-tr-lg rounded-br-lg">
+        <h2 class="text-xl font-semibold mb-4 text-gray-800">Components</h2>
+
+        <div id="components-library" class="grid grid-cols-1 gap-4 mb-6">
+            <!-- Pre-defined Components -->
+            <div class="component-card p-4 bg-blue-100 rounded-lg shadow-sm text-blue-800 text-center text-sm font-medium hover:bg-blue-200" draggable="true" data-component-type="navbar">Navbar</div>
+            <div class="component-card p-4 bg-purple-100 rounded-lg shadow-sm text-purple-800 text-center text-sm font-medium hover:bg-purple-200" draggable="true" data-component-type="hero">Hero Section</div>
+            <div class="component-card p-4 bg-green-100 rounded-lg shadow-sm text-green-800 text-center text-sm font-medium hover:bg-green-200" draggable="true" data-component-type="services">Services Section</div>
+            <div class="component-card p-4 bg-yellow-100 rounded-lg shadow-sm text-yellow-800 text-center text-sm font-medium hover:bg-yellow-200" draggable="true" data-component-type="testimonials">Testimonials Section</div>
+            <div class="component-card p-4 bg-red-100 rounded-lg shadow-sm text-red-800 text-center text-sm font-medium hover:bg-red-200" draggable="true" data-component-type="footer">Footer Section</div>
+        </div>
+
+        <h2 class="text-xl font-semibold mb-4 text-gray-800">Full Templates</h2>
+        <div id="templates-library" class="grid grid-cols-1 gap-4 mb-6">
+            <!-- Pre-defined Templates -->
+            <div class="template-card p-4 bg-indigo-100 rounded-lg shadow-sm text-indigo-800 text-center text-sm font-medium hover:bg-indigo-200" draggable="true" data-template-type="full-page-1">Navbar + Hero + Footer</div>
+            <div class="template-card p-4 bg-pink-100 rounded-lg shadow-sm text-pink-800 text-center text-sm font-medium hover:bg-pink-200" draggable="true" data-template-type="full-page-2">Hero + Services + Testimonials</div>
+        </div>
+
+        <div class="mt-auto pt-6 border-t border-gray-200">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Add Your Own Component/Template</h2>
+            <textarea id="custom-code-input" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 h-32 mb-3 resize-y" placeholder="Paste your HTML code here..."></textarea>
+            <button id="add-custom-component-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition duration-200 shadow-md">Add Custom Component</button>
+        </div>
+    </div>
+
+    <div id="right-panel" class="flex flex-col bg-gray-200 flex-grow rounded-tl-lg rounded-bl-lg">
+        <div class="p-4 bg-gray-800 text-white text-center text-lg font-bold rounded-tl-lg">
+            Website Canvas
+        </div>
+        <div id="editor-toolbar" class="flex flex-col gap-2">
+            <span class="font-bold">Edit Element</span>
+            <input type="color" id="background-color-picker" title="Background Color">
+            <button id="remove-component-btn" class="bg-red-500 hover:bg-red-600">Remove</button>
+        </div>
+        <div id="canvas-wrapper" class="relative flex-grow bg-white m-4 rounded-lg shadow-inner overflow-y-auto">
+            <div id="canvas" class="min-h-full w-full flex flex-col items-center gap-4 p-4">
+                <!-- Dropped components will appear here -->
+                <div class="text-gray-400 text-xl font-medium p-8 border border-dashed border-gray-300 rounded-lg bg-gray-50">
+                    Drag and drop components or templates here!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const customCodeInput = document.getElementById('custom-code-input');
+        const addCustomComponentBtn = document.getElementById('add-custom-component-btn');
+        const componentsLibrary = document.getElementById('components-library');
+        const templatesLibrary = document.getElementById('templates-library');
+        const editorToolbar = document.getElementById('editor-toolbar');
+        const backgroundColorPicker = document.getElementById('background-color-picker');
+        const removeComponentBtn = document.getElementById('remove-component-btn');
+
+        let draggedComponentHTML = null;
+        let draggedComponentType = null;
+        let activeEditableElement = null; // Stores the currently active contenteditable element
+        let activeDroppedComponent = null; // Stores the currently selected dropped component for toolbar actions
+
+        // Pre-defined HTML for components
+        const componentHTML = {
+            navbar: `
+                <nav class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4 flex justify-between items-center rounded-lg shadow-lg">
+                    <div class="text-2xl font-bold rounded-md px-2 py-1" contenteditable="true">MyBrand</div>
+                    <ul class="flex space-x-6">
+                        <li><a href="#" class="hover:text-blue-200 transition duration-200 rounded-md px-2 py-1" contenteditable="true">Home</a></li>
+                        <li><a href="#" class="hover:text-blue-200 transition duration-200 rounded-md px-2 py-1" contenteditable="true">About</a></li>
+                        <li><a href="#" class="hover:text-blue-200 transition duration-200 rounded-md px-2 py-1" contenteditable="true">Services</a></li>
+                        <li><a href="#" class="hover:text-blue-200 transition duration-200 rounded-md px-2 py-1" contenteditable="true">Contact</a></li>
+                    </ul>
+                </nav>
+            `,
+            hero: `
+                <section class="w-full bg-gray-900 text-white py-20 px-8 text-center rounded-lg shadow-lg">
+                    <h1 class="text-5xl font-extrabold mb-4 rounded-md px-2 py-1" contenteditable="true">Welcome to Our Amazing Website!</h1>
+                    <p class="text-xl mb-8 text-gray-300 rounded-md px-2 py-1" contenteditable="true">Discover innovative solutions for your business needs.</p>
+                    <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-300">
+                        <span contenteditable="true">Learn More</span>
+                    </button>
+                </section>
+            `,
+            services: `
+                <section class="w-full bg-white py-16 px-8 text-center rounded-lg shadow-lg">
+                    <h2 class="text-4xl font-bold text-gray-800 mb-12 rounded-md px-2 py-1" contenteditable="true">Our Services</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div class="p-6 bg-gray-100 rounded-lg shadow-md hover:shadow-xl transition duration-300">
+                            <h3 class="text-2xl font-semibold text-gray-800 mb-4 rounded-md px-2 py-1" contenteditable="true">Web Development</h3>
+                            <p class="text-gray-600 rounded-md px-2 py-1" contenteditable="true">Crafting responsive and high-performance websites for your business.</p>
+                        </div>
+                        <div class="p-6 bg-gray-100 rounded-lg shadow-md hover:shadow-xl transition duration-300">
+                            <h3 class="text-2xl font-semibold text-gray-800 mb-4 rounded-md px-2 py-1" contenteditable="true">Digital Marketing</h3>
+                            <p class="text-gray-600 rounded-md px-2 py-1" contenteditable="true">Boost your online presence with our comprehensive marketing strategies.</p>
+                        </div>
+                        <div class="p-6 bg-gray-100 rounded-lg shadow-md hover:shadow-xl transition duration-300">
+                            <h3 class="text-2xl font-semibold text-gray-800 mb-4 rounded-md px-2 py-1" contenteditable="true">UI/UX Design</h3>
+                            <p class="text-gray-600 rounded-md px-2 py-1" contenteditable="true">Creating intuitive and aesthetically pleasing user interfaces.</p>
+                        </div>
+                    </div>
+                </section>
+            `,
+            testimonials: `
+                <section class="w-full bg-gray-100 py-16 px-8 text-center rounded-lg shadow-lg">
+                    <h2 class="text-4xl font-bold text-gray-800 mb-12 rounded-md px-2 py-1" contenteditable="true">What Our Clients Say</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="bg-white p-8 rounded-lg shadow-md border-t-4 border-blue-500">
+                            <p class="text-gray-700 italic mb-4 rounded-md px-2 py-1" contenteditable="true">"Outstanding service! Our website has never looked better and traffic has doubled."</p>
+                            <p class="font-semibold text-gray-900 rounded-md px-2 py-1" contenteditable="true">- Jane Doe, CEO of Tech Innovations</p>
+                        </div>
+                        <div class="bg-white p-8 rounded-lg shadow-md border-t-4 border-purple-500">
+                            <p class="text-gray-700 italic mb-4 rounded-md px-2 py-1" contenteditable="true">"Professional and highly skilled team. They delivered beyond our expectations."</p>
+                            <p class="font-semibold text-gray-900 rounded-md px-2 py-1" contenteditable="true"> - John Smith, Founder of Creative Solutions</p>
+                        </div>
+                    </div>
+                </section>
+            `,
+            footer: `
+                <footer class="w-full bg-gray-800 text-white py-10 px-8 text-center rounded-lg shadow-lg">
+                    <div class="flex flex-col md:flex-row justify-center items-center gap-6 mb-6">
+                        <a href="#" class="hover:text-gray-300 transition duration-200 rounded-md px-2 py-1" contenteditable="true">Privacy Policy</a>
+                        <span class="hidden md:inline-block">|</span>
+                        <a href="#" class="hover:text-gray-300 transition duration-200 rounded-md px-2 py-1" contenteditable="true">Terms of Service</a>
+                        <span class="hidden md:inline-block">|</span>
+                        <a href="#" class="hover:text-gray-300 transition duration-200 rounded-md px-2 py-1" contenteditable="true">Sitemap</a>
+                    </div>
+                    <p class="text-gray-400 text-sm rounded-md px-2 py-1" contenteditable="true">&copy; 2025 My Website. All rights reserved.</p>
+                </footer>
+            `
+        };
+
+        // Pre-defined HTML for full templates
+        const templateHTML = {
+            'full-page-1': `
+                <div class="w-full flex flex-col gap-4">
+                    ${componentHTML.navbar}
+                    ${componentHTML.hero}
+                    ${componentHTML.footer}
+                </div>
+            `,
+            'full-page-2': `
+                <div class="w-full flex flex-col gap-4">
+                    ${componentHTML.hero}
+                    ${componentHTML.services}
+                    ${componentHTML.testimonials}
+                </div>
+            `
+        };
+
+
+        // --- Drag and Drop Handlers ---
+
+        document.querySelectorAll('.component-card, .template-card').forEach(card => {
+            card.addEventListener('dragstart', (e) => {
+                draggedComponentType = e.target.dataset.componentType || e.target.dataset.templateType;
+                draggedComponentHTML = componentHTML[draggedComponentType] || templateHTML[draggedComponentType];
+
+                if (!draggedComponentHTML) {
+                    // This is for custom components added later
+                    const customCard = e.target.closest('.custom-component-card');
+                    if (customCard) {
+                        draggedComponentHTML = customCard.dataset.html;
+                        draggedComponentType = 'custom';
+                    }
+                }
+
+                e.dataTransfer.setData('text/plain', draggedComponentType); // Store type
+                e.dataTransfer.effectAllowed = 'copy';
+            });
+        });
+
+        canvas.addEventListener('dragover', (e) => {
+            e.preventDefault(); // Allow dropping
+            e.dataTransfer.dropEffect = 'copy';
+        });
+
+        canvas.addEventListener('drop', (e) => {
+            e.preventDefault();
+
+            if (draggedComponentHTML) {
+                // If the initial "Drag and drop..." text is present, remove it
+                const placeholder = canvas.querySelector('.text-gray-400.text-xl');
+                if (placeholder) {
+                    canvas.removeChild(placeholder);
+                }
+
+                // Create a temporary div to hold the new element(s)
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = draggedComponentHTML.trim();
+
+                // Get the first child to append
+                const newElement = tempDiv.firstElementChild;
+
+                if (newElement) {
+                    newElement.classList.add('w-full'); // Ensure it takes full width
+                    newElement.classList.add('shadow-md', 'hover:shadow-lg', 'transition-all', 'duration-300'); // Add some default styles
+                    newElement.classList.add('dropped-component'); // Mark as dropped component
+
+                    canvas.appendChild(newElement);
+                    addEditingListeners(newElement);
+                }
+            }
+            draggedComponentHTML = null; // Reset
+            draggedComponentType = null; // Reset
+        });
+
+        // --- Editing Functionality ---
+
+        function addEditingListeners(element) {
+            // Add click listener to the entire dropped component to enable toolbar
+            element.addEventListener('click', (e) => {
+                // Prevent event from bubbling up and hiding the toolbar if clicked on a child editable element
+                e.stopPropagation();
+
+                // Remove active class from previously active component
+                if (activeDroppedComponent && activeDroppedComponent !== element) {
+                    activeDroppedComponent.classList.remove('active-component');
+                }
+
+                // Set current component as active
+                activeDroppedComponent = element;
+                activeDroppedComponent.classList.add('active-component');
+
+                // Update color picker with current background color
+                const computedStyle = window.getComputedStyle(element);
+                const bgColor = computedStyle.backgroundColor;
+                try {
+                    const hexColor = rgbToHex(bgColor);
+                    backgroundColorPicker.value = hexColor;
+                } catch (e) {
+                    console.error("Error converting RGB to Hex for background color:", e);
+                    backgroundColorPicker.value = "#ffffff"; // Default white if conversion fails
+                }
+
+
+                // Show toolbar
+                editorToolbar.style.display = 'flex';
+                editorToolbar.style.opacity = '1';
+
+                // Hide toolbar when clicking outside the active component or toolbar
+                document.addEventListener('click', hideToolbarOnClickOutside);
+            });
+
+            // Make all child elements with contenteditable="true" directly editable
+            element.querySelectorAll('[contenteditable="true"]').forEach(editable => {
+                editable.addEventListener('focus', () => {
+                    activeEditableElement = editable; // Set the currently focused editable element
+                });
+                editable.addEventListener('blur', () => {
+                    activeEditableElement = null; // Clear when focus leaves
+                });
+            });
+
+            // Re-execute scripts within the newly added element (for components like mobile menus)
+            element.querySelectorAll('script').forEach(oldScript => {
+                const newScript = document.createElement('script');
+                // Copy attributes from the old script to the new one
+                Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                // Copy content of the script
+                newScript.textContent = oldScript.textContent;
+                // Replace the old script with the new one to re-execute it
+                oldScript.parentNode.replaceChild(newScript, oldScript);
+            });
+        }
+
+        // Helper function to convert RGB to Hex
+        function rgbToHex(rgb) {
+            const rgbMatch = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+            if (!rgbMatch) return "#ffffff"; // Default to white if not an RGB string
+
+            const toHex = (c) => {
+                const hex = parseInt(c).toString(16);
+                return hex.length === 1 ? "0" + hex : hex;
+            };
+
+            return "#" + toHex(rgbMatch[1]) + toHex(rgbMatch[2]) + toHex(rgbMatch[3]);
+        }
+
+        // Toolbar actions
+        backgroundColorPicker.addEventListener('input', (e) => {
+            if (activeDroppedComponent) {
+                activeDroppedComponent.style.backgroundColor = e.target.value;
+            }
+        });
+
+        removeComponentBtn.addEventListener('click', () => {
+            if (activeDroppedComponent) {
+                // Confirm removal (using a simple modal for user confirmation)
+                const confirmationModal = document.createElement('div');
+                confirmationModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                confirmationModal.innerHTML = `
+                    <div class="bg-white p-8 rounded-lg shadow-xl flex flex-col items-center">
+                        <p class="text-lg font-semibold mb-6 text-gray-800">Are you sure you want to remove this component?</p>
+                        <div class="flex space-x-4">
+                            <button id="confirm-remove" class="bg-red-600 text-white py-2 px-6 rounded-lg hover:bg-red-700 transition duration-200">Yes, Remove</button>
+                            <button id="cancel-remove" class="bg-gray-300 text-gray-800 py-2 px-6 rounded-lg hover:bg-gray-400 transition duration-200">Cancel</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(confirmationModal);
+
+                document.getElementById('confirm-remove').addEventListener('click', () => {
+                    canvas.removeChild(activeDroppedComponent);
+                    activeDroppedComponent = null;
+                    editorToolbar.style.display = 'none'; // Hide toolbar after removal
+                    confirmationModal.remove(); // Remove the modal
+                    document.removeEventListener('click', hideToolbarOnClickOutside);
+                });
+
+                document.getElementById('cancel-remove').addEventListener('click', () => {
+                    confirmationModal.remove(); // Remove the modal
+                });
+            }
+        });
+
+
+        // Function to hide toolbar when clicking outside of it or the active component
+        function hideToolbarOnClickOutside(e) {
+            // Check if the click was outside the active component and outside the toolbar
+            if (activeDroppedComponent && !activeDroppedComponent.contains(e.target) && !editorToolbar.contains(e.target)) {
+                editorToolbar.style.display = 'none';
+                activeDroppedComponent.classList.remove('active-component');
+                activeDroppedComponent = null;
+                document.removeEventListener('click', hideToolbarOnClickOutside); // Remove listener
+            }
+        }
+
+        // Initially hide toolbar
+        editorToolbar.style.display = 'none';
+
+        // --- Add Custom Component Functionality ---
+
+        addCustomComponentBtn.addEventListener('click', () => {
+            const customHTML = customCodeInput.value.trim();
+            if (customHTML) {
+                // Create a new draggable card for the custom component
+                const newCard = document.createElement('div');
+                newCard.className = 'custom-component-card p-4 bg-gray-200 rounded-lg shadow-sm text-gray-800 text-center text-sm font-medium hover:bg-gray-300 cursor-grab transition duration-200';
+                newCard.draggable = true;
+                newCard.dataset.html = customHTML; // Store the HTML in a data attribute
+                newCard.textContent = 'Custom Component'; // Display name
+
+                // Add dragstart listener for this new card
+                newCard.addEventListener('dragstart', (e) => {
+                    draggedComponentHTML = e.target.dataset.html;
+                    draggedComponentType = 'custom'; // Indicate it's a custom component
+                    e.dataTransfer.setData('text/plain', draggedComponentType);
+                    e.dataTransfer.effectAllowed = 'copy';
+                });
+
+                componentsLibrary.appendChild(newCard); // Add to components library
+
+                customCodeInput.value = ''; // Clear textarea
+                // Provide feedback to the user (e.g., a temporary message)
+                const feedbackDiv = document.createElement('div');
+                feedbackDiv.textContent = 'Custom component added!';
+                feedbackDiv.className = 'text-green-600 text-sm mt-2';
+                componentsLibrary.appendChild(feedbackDiv);
+                setTimeout(() => feedbackDiv.remove(), 3000);
+            } else {
+                // Provide feedback if textarea is empty
+                const feedbackDiv = document.createElement('div');
+                feedbackDiv.textContent = 'Please paste some HTML code first.';
+                feedbackDiv.className = 'text-red-600 text-sm mt-2';
+                addCustomComponentBtn.parentNode.insertBefore(feedbackDiv, customCodeInput.nextSibling);
+                setTimeout(() => feedbackDiv.remove(), 3000);
+            }
+        });
+
+        // Initialize listeners for existing component cards (for page load)
+        document.querySelectorAll('.component-card, .template-card').forEach(card => {
+            card.addEventListener('dragstart', (e) => {
+                draggedComponentType = e.target.dataset.componentType || e.target.dataset.templateType;
+                draggedComponentHTML = componentHTML[draggedComponentType] || templateHTML[draggedComponentType];
+                e.dataTransfer.setData('text/plain', draggedComponentType);
+                e.dataTransfer.effectAllowed = 'copy';
+            });
+        });
+
+        // Initial check for placeholder text, if canvas is empty, add it
+        if (canvas.children.length === 0) {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'text-gray-400 text-xl font-medium p-8 border border-dashed border-gray-300 rounded-lg bg-gray-50';
+            placeholder.textContent = 'Drag and drop components or templates here!';
+            canvas.appendChild(placeholder);
+        }
+    </script>
+</body>
+</html>
