@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 5000; // Use port from environment variable or 
 const MONGODB_URI = process.env.MONGODB_URI; // Get MongoDB URI from environment variables
 // Replace the current app.use(cors()) with:
 const corsOptions = {
-  origin: ['http://localhost:3000', 'https://mydiffprojects.onrender.com'],
+  origin: ['http://localhost:3000', 'https://mydiffprojects.onrender.com','https://mygrowthplanner.netlify.app'],
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true, // if you need to send cookies
   optionsSuccessStatus: 204
