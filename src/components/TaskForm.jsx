@@ -59,10 +59,10 @@ export default function TaskForm({ selectedTask, onTaskAdded, onCancelEdit }) {
 
     try {
       if (task._id) {
-      await axios.put(`https://crud-3-r2wo.onrender.com/api/tasks/${task._id}`, task);
+      await axios.put(`https://mydiffprojects.onrender.com/api/tasks/${task._id}`, task);
         toast.success('Task updated successfully!');
       } else {
-        await axios.post('https://crud-3-r2wo.onrender.com/api/tasks', task);
+        await axios.post('https://mydiffprojects.onrender.com/api/tasks', task);
         toast.success('Task added successfully!');
       }
       // Reset task to default values after submission
