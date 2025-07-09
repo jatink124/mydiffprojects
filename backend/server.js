@@ -12,7 +12,7 @@ const MONGODB_URI = process.env.MONGODB_URI;
 
 // CORS configuration
 const corsOptions = {
-  origin: ['http://localhost:3000', 'https://mydiffprojects.onrender.com', 'https://mygrowthplanner.netlify.app'],
+  origin: ['http://localhost:3000', 'https://mydiffprojects.onrender.com', 'https://mygrowthplanner.netlify.app/'],
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true,
   optionsSuccessStatus: 204
