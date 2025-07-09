@@ -7,10 +7,11 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 export default function TaskForm({ selectedTask, onTaskAdded, onCancelEdit }) {
+  // Define categories and priorities for task selection
   const categories = ['General', 'Web Development', 'Trading', 'Personal', 'Work', 'Study', 'Health'];
-  // Expanded priorities with more levels for P1, P2, P3, etc.
   const priorities = ['P1 - Critical', 'P2 - High', 'P3 - Medium', 'P4 - Low', 'P5 - Very Low'];
 
+  // State to manage the task data, initialized with selectedTask or default values
   const [task, setTask] = useState(selectedTask || {
     title: '',
     description: '',
@@ -20,34 +21,40 @@ export default function TaskForm({ selectedTask, onTaskAdded, onCancelEdit }) {
     category: 'General',
     eisenhowerQuadrant: 'Important/Not Urgent' // New field for Eisenhower Matrix
   });
+  // State to track if the form is in editing mode
   const [isEditing, setIsEditing] = useState(!!selectedTask);
 
+  // Effect hook to update task state when selectedTask prop changes
   useEffect(() => {
     setTask(selectedTask ? {
       ...selectedTask,
-      dueDate: selectedTask.dueDate ? new Date(selectedTask.dueDate) : null
+      dueDate: selectedTask.dueDate ? new Date(selectedTask.dueDate) : null // Convert dueDate string to Date object
     } : {
       title: '',
       description: '',
       dueDate: null,
-      priority: 'P3 - Medium', // Default to a medium P-level
+      priority: 'P3 - Medium',
       completed: false,
       category: 'General',
       eisenhowerQuadrant: 'Important/Not Urgent'
     });
-    setIsEditing(!!selectedTask);
+    setIsEditing(!!selectedTask); // Set editing mode based on selectedTask presence
   }, [selectedTask]);
 
+  // Handler for input and select field changes
   const handleChange = e => {
     setTask({ ...task, [e.target.name]: e.target.value });
   };
 
+  // Handler for DatePicker changes
   const handleDateChange = date => {
     setTask({ ...task, dueDate: date });
   };
 
+  // Handler for form submission (add or update task)
   const handleSubmit = async e => {
     e.preventDefault();
+    // Basic validation for title and due date
     if (!task.title.trim()) {
       toast.error('Task title is required!');
       return;
@@ -59,23 +66,26 @@ export default function TaskForm({ selectedTask, onTaskAdded, onCancelEdit }) {
 
     try {
       if (task._id) {
-      await axios.put(`https://mydiffprojects.onrender.com/api/tasks/${task._id}`, task);
+        // If task has an _id, it's an existing task, so update it
+        await axios.put(`https://mydiffprojects.onrender.com/api/tasks/${task._id}`, task);
         toast.success('Task updated successfully!');
       } else {
+        // Otherwise, it's a new task, so add it
         await axios.post('https://mydiffprojects.onrender.com/api/tasks', task);
         toast.success('Task added successfully!');
       }
-      // Reset task to default values after submission
+      // Reset form to default values after successful submission
       setTask({ title: '', description: '', dueDate: null, priority: 'P3 - Medium', completed: false, category: 'General', eisenhowerQuadrant: 'Important/Not Urgent' });
-      setIsEditing(false);
-      onTaskAdded();
-      if (onCancelEdit) onCancelEdit();
+      setIsEditing(false); // Exit editing mode
+      onTaskAdded(); // Trigger refresh in parent component
+      if (onCancelEdit) onCancelEdit(); // Call cancel edit if provided
     } catch (err) {
       console.error('Error saving task:', err);
       toast.error('Failed to save task.');
     }
   };
 
+  // Handler to clear the form fields
   const handleClearForm = () => {
     setTask({ title: '', description: '', dueDate: null, priority: 'P3 - Medium', completed: false, category: 'General', eisenhowerQuadrant: 'Important/Not Urgent' });
     setIsEditing(false);
@@ -83,131 +93,177 @@ export default function TaskForm({ selectedTask, onTaskAdded, onCancelEdit }) {
   };
 
   return (
-    <div className="bg-gradient-to-br from-white to-gray-50 shadow-2xl rounded-xl p-8 space-y-6 mb-10 border border-gray-100 transform transition-all duration-300 hover:scale-[1.005]">
-      <h2 className="text-3xl font-extrabold text-gray-800 flex items-center gap-3 border-b pb-4 mb-4 border-gray-200">
-        {isEditing ? <FiSave className="text-blue-500" /> : <FiPlusCircle className="text-green-500" />}
+    <div className="bg-gradient-to-br from-white to-gray-50 shadow-2xl rounded-xl
+                    p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12
+                    space-y-4 sm:space-y-5 md:space-y-6 lg:space-y-7 xl:space-y-8
+                    mb-8 sm:mb-10 md:mb-12 lg:mb-14 xl:mb-16
+                    border border-gray-100 transform transition-all duration-300 hover:scale-[1.005]">
+      {/* Form Title */}
+      <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl
+                     font-extrabold text-gray-800 flex items-center
+                     gap-2 sm:gap-3 md:gap-4
+                     border-b pb-3 sm:pb-4 md:pb-5
+                     mb-3 sm:mb-4 md:mb-5 border-gray-200">
+        {isEditing ? <FiSave className="text-blue-500 text-lg sm:text-xl md:text-2xl lg:text-3xl" /> : <FiPlusCircle className="text-green-500 text-lg sm:text-xl md:text-2xl lg:text-3xl" />}
         {isEditing ? 'Update Your Task' : 'Add a New Task'}
       </h2>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 md:space-y-6">
+        {/* Task Title Input */}
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Task Title <span className="text-red-500">*</span></label>
+          <label htmlFor="title" className="block text-sm sm:text-base md:text-lg font-medium text-gray-700 mb-1">Task Title <span className="text-red-500">*</span></label>
           <input
             id="title"
             name="title"
             value={task.title}
             onChange={handleChange}
             placeholder="e.g., Complete React project refactor"
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-lg placeholder-gray-400 transition-all duration-200"
+            className="w-full p-2.5 sm:p-3 md:p-3.5 lg:p-4
+                       border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent
+                       text-base sm:text-lg md:text-xl placeholder-gray-400 transition-all duration-200"
             maxLength="100"
             required
           />
         </div>
 
+        {/* Description Textarea */}
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <label htmlFor="description" className="block text-sm sm:text-base md:text-lg font-medium text-gray-700 mb-1">Description</label>
           <textarea
             id="description"
             name="description"
             value={task.description}
             onChange={handleChange}
             placeholder="Provide a detailed explanation of the task..."
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent min-h-[100px] text-base placeholder-gray-400 transition-all duration-200"
+            className="w-full p-2.5 sm:p-3 md:p-3.5 lg:p-4
+                       border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent
+                       min-h-[80px] sm:min-h-[100px] md:min-h-[120px] lg:min-h-[150px]
+                       text-sm sm:text-base md:text-lg placeholder-gray-400 transition-all duration-200"
             rows="4"
             maxLength="500"
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Due Date and Category Selects */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
+          {/* Due Date Picker */}
           <div className="relative">
-            <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 mb-1">Due Date <span className="text-red-500">*</span></label>
+            <label htmlFor="dueDate" className="block text-sm sm:text-base md:text-lg font-medium text-gray-700 mb-1">Due Date <span className="text-red-500">*</span></label>
             <DatePicker
               id="dueDate"
               selected={task.dueDate}
               onChange={handleDateChange}
               dateFormat="yyyy/MM/dd"
               placeholderText="Select due date"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-lg pr-10 cursor-pointer transition-all duration-200"
+              className="w-full p-2.5 sm:p-3 md:p-3.5 lg:p-4
+                         border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent
+                         text-base sm:text-lg md:text-xl pr-9 sm:pr-10 md:pr-11 lg:pr-12
+                         cursor-pointer transition-all duration-200"
               minDate={new Date()}
               isClearable
               required
             />
-            <FiCalendar className="absolute right-3 top-1/2 mt-2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+            <FiCalendar className="absolute right-3 top-1/2 mt-0.5 sm:mt-1 md:mt-2 -translate-y-1/2
+                                 text-gray-500 pointer-events-none text-base sm:text-lg md:text-xl" />
           </div>
 
+          {/* Category Select */}
           <div>
-            <label htmlFor="category-select" className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <label htmlFor="category-select" className="block text-sm sm:text-base md:text-lg font-medium text-gray-700 mb-1">Category</label>
             <div className="relative">
               <select
                 id="category-select"
                 name="category"
                 value={task.category}
                 onChange={handleChange}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-base appearance-none pr-10 transition-all duration-200 cursor-pointer"
+                className="w-full p-2.5 sm:p-3 md:p-3.5 lg:p-4
+                           border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent
+                           text-sm sm:text-base md:text-lg appearance-none pr-9 sm:pr-10 md:pr-11 lg:pr-12
+                           transition-all duration-200 cursor-pointer"
               >
                 {categories.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
-              <FiTag className="absolute right-3 top-1/2 mt-2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+              <FiTag className="absolute right-3 top-1/2 mt-0.5 sm:mt-1 md:mt-2 -translate-y-1/2
+                               text-gray-500 pointer-events-none text-base sm:text-lg md:text-xl" />
             </div>
           </div>
         </div>
 
+        {/* Priority Level Select */}
         <div>
-          <label htmlFor="priority-select" className="block text-sm font-medium text-gray-700 mb-1">Priority Level</label>
+          <label htmlFor="priority-select" className="block text-sm sm:text-base md:text-lg font-medium text-gray-700 mb-1">Priority Level</label>
           <div className="relative">
             <select
               id="priority-select"
               name="priority"
               value={task.priority}
               onChange={handleChange}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-base appearance-none pr-10 transition-all duration-200 cursor-pointer"
+              className="w-full p-2.5 sm:p-3 md:p-3.5 lg:p-4
+                         border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent
+                         text-sm sm:text-base md:text-lg appearance-none pr-9 sm:pr-10 md:pr-11 lg:pr-12
+                         transition-all duration-200 cursor-pointer"
             >
               {priorities.map(p => (
                 <option key={p} value={p}>{p}</option>
               ))}
             </select>
-            <FiClock className="absolute right-3 top-1/2 mt-2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+            <FiClock className="absolute right-3 top-1/2 mt-0.5 sm:mt-1 md:mt-2 -translate-y-1/2
+                               text-gray-500 pointer-events-none text-base sm:text-lg md:text-xl" />
           </div>
         </div>
 
-        {/* Eisenhower Matrix Selector (New Addition) */}
+        {/* Eisenhower Matrix Selector */}
         <div>
-          <label htmlFor="eisenhower-select" className="block text-sm font-medium text-gray-700 mb-1">Eisenhower Quadrant</label>
+          <label htmlFor="eisenhower-select" className="block text-sm sm:text-base md:text-lg font-medium text-gray-700 mb-1">Eisenhower Quadrant</label>
           <div className="relative">
             <select
               id="eisenhower-select"
               name="eisenhowerQuadrant"
               value={task.eisenhowerQuadrant}
               onChange={handleChange}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-base appearance-none pr-10 transition-all duration-200 cursor-pointer"
+              className="w-full p-2.5 sm:p-3 md:p-3.5 lg:p-4
+                         border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent
+                         text-sm sm:text-base md:text-lg appearance-none pr-9 sm:pr-10 md:pr-11 lg:pr-12
+                         transition-all duration-200 cursor-pointer"
             >
               <option value="Urgent/Important">Urgent & Important (Do)</option>
               <option value="Important/Not Urgent">Important & Not Urgent (Schedule)</option>
               <option value="Urgent/Not Important">Urgent & Not Important (Delegate)</option>
               <option value="Not Urgent/Not Important">Not Urgent & Not Important (Delete)</option>
             </select>
-            <FiTag className="absolute right-3 top-1/2 mt-2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+            <FiTag className="absolute right-3 top-1/2 mt-0.5 sm:mt-1 md:mt-2 -translate-y-1/2
+                             text-gray-500 pointer-events-none text-base sm:text-lg md:text-xl" />
           </div>
         </div>
 
-
-        <div className="flex justify-end space-x-4 pt-4">
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row justify-end
+                        space-y-3 sm:space-y-0 sm:space-x-4 md:space-x-5 lg:space-x-6
+                        pt-3 sm:pt-4 md:pt-5">
           {isEditing && (
             <button
               type="button"
               onClick={handleClearForm}
-              className="flex items-center gap-2 px-6 py-3 rounded-lg text-gray-700 bg-gray-100 border border-gray-300 hover:bg-gray-200 transition-colors duration-200 shadow-sm font-medium"
+              className="w-full sm:w-auto flex items-center justify-center
+                         gap-2 px-5 py-2.5 sm:px-6 sm:py-3 md:px-7 md:py-3.5 lg:px-8 lg:py-4
+                         rounded-lg text-gray-700 bg-gray-100 border border-gray-300
+                         hover:bg-gray-200 transition-colors duration-200 shadow-sm
+                         font-medium text-base sm:text-lg"
             >
-              <FiXCircle className="text-lg" /> Cancel
+              <FiXCircle className="text-lg sm:text-xl" /> Cancel
             </button>
           )}
           <button
             type="submit"
-            className="flex items-center gap-2 px-8 py-3 rounded-lg bg-blue-600 text-white font-semibold shadow-md hover:bg-blue-700 transition-colors duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full sm:w-auto flex items-center justify-center
+                       gap-2 px-7 py-2.5 sm:px-8 sm:py-3 md:px-9 md:py-3.5 lg:px-10 lg:py-4
+                       rounded-lg bg-blue-600 text-white font-semibold shadow-md
+                       hover:bg-blue-700 transition-colors duration-200 transform hover:scale-[1.02] active:scale-[0.98]
+                       text-base sm:text-lg"
           >
-            {isEditing ? <FiSave className="text-lg" /> : <FiPlusCircle className="text-lg" />}
+            {isEditing ? <FiSave className="text-lg sm:text-xl" /> : <FiPlusCircle className="text-lg sm:text-xl" />}
             {isEditing ? 'Update Task' : 'Add Task'}
           </button>
         </div>
