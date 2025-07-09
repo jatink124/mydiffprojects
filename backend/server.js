@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const cors = require('cors'); // CORS middleware
 
 const taskRoutes = require('./routes/taskRoutes');
-const geminiRoutes = require('./routes/geminiRoutes');
+// const geminiRoutes = require('./routes/geminiRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -38,7 +38,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/tasks', taskRoutes);
-app.use('/api/gemini', geminiRoutes);
+// app.use('/api/gemini', geminiRoutes);
 
 // Simple root route to confirm server is running
 app.get('/', (req, res) => {
