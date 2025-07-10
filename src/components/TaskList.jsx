@@ -608,7 +608,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
             </div>
 
             {/* AI Insights for Category */}
-            {activeTab && (
+            {/* {activeTab && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                     <h3 className="text-lg font-bold text-blue-800 mb-2">
                         AI Insights for "{activeTab}" Category
@@ -624,7 +624,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
                         </div>
                     )}
                 </div>
-            )}
+            )} */}
 
 
             {displayedTasks.length === 0 ? (
