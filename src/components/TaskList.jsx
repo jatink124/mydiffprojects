@@ -42,26 +42,146 @@ const savePendingChangesToLocalStorage = (changes) => {
     }
 };
 
+// --- TaskDetailModal Component ---
+// This component will display all task details when a task title is clicked on mobile
+const TaskDetailModal = ({ task, aiAnalysis, loadingAI, onClose, onEditTask, onDeleteTask, toggleComplete }) => {
+    if (!task) return null; // Don't render if no task is selected
+
+    const getPriorityColor = (priority) => {
+        switch (priority) {
+            case 'P1 - Critical': return 'bg-red-200 text-red-800 ring-red-300';
+            case 'P2 - High': return 'bg-orange-100 text-orange-700 ring-orange-200';
+            case 'P3 - Medium': return 'bg-yellow-100 text-yellow-700 ring-yellow-200';
+            case 'P4 - Low': return 'bg-green-100 text-green-700 ring-green-200';
+            case 'P5 - Very Low': return 'bg-blue-100 text-blue-700 ring-blue-200';
+            default: return 'bg-gray-100 text-gray-700 ring-gray-200';
+        }
+    };
+
+    const getCategoryTagColor = (category) => {
+        switch (category) {
+            case 'Web Development': return 'bg-blue-50 text-blue-700 ring-blue-100';
+            case 'Trading': return 'bg-purple-50 text-purple-700 ring-purple-100';
+            case 'Personal': return 'bg-pink-50 text-pink-700 ring-pink-100';
+            case 'Work': return 'bg-indigo-50 text-indigo-700 ring-indigo-100';
+            case 'Study': return 'bg-orange-50 text-orange-700 ring-orange-100';
+            case 'Health': return 'bg-teal-50 text-teal-700 ring-teal-100';
+            case 'General': return 'bg-gray-50 text-gray-700 ring-gray-100';
+            default: return 'bg-gray-50 text-gray-700 ring-gray-100';
+        }
+    };
+
+    return (
+        // Modal Overlay - fixed position, covers whole screen, dark background
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4" onClick={onClose}>
+            {/* Modal Content - white background, rounded corners, max width, scrollable */}
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-100 opacity-100" onClick={e => e.stopPropagation()}>
+                {/* Modal Header */}
+                <div className="flex justify-between items-center p-5 border-b border-gray-200">
+                    <h3 className="text-2xl font-bold text-gray-800">{task.title}</h3>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 transition-colors">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                {/* Modal Body */}
+                <div className="p-5 space-y-4 text-gray-700">
+                    <div>
+                        <p className="font-semibold text-gray-900">Description:</p>
+                        <p>{task.description || 'No description provided.'}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 items-center">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ring-1 ${getPriorityColor(task.priority)}`}>
+                            {task.priority}
+                        </span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ring-1 ${getCategoryTagColor(task.category)}`}>
+                            {task.category}
+                        </span>
+                        {task.eisenhowerQuadrant && (
+                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 ring-indigo-200">
+                                {task.eisenhowerQuadrant}
+                            </span>
+                        )}
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${task.completed ? 'bg-green-100 text-green-700 ring-green-200' : 'bg-red-100 text-red-700 ring-red-200'}`}>
+                            {task.completed ? 'Completed' : 'Pending'}
+                        </span>
+                        <input
+                            type="checkbox"
+                            checked={task.completed}
+                            onChange={() => toggleComplete(task)} // Use passed toggleComplete
+                            className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer ml-auto"
+                            title={task.completed ? "Mark as Pending" : "Mark as Complete"}
+                        />
+                    </div>
+                    <div>
+                        <p className="font-semibold text-gray-900">Due Date:</p>
+                        <p>{new Date(task.dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                    {task.completedAt && (
+                        <div>
+                            <p className="font-semibold text-gray-900">Completed At:</p>
+                            <p>{new Date(task.completedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+                    )}
+
+                    <div className="mt-4 border-t border-gray-200 pt-4">
+                        <h4 className="text-lg font-bold text-gray-800 mb-2">AI Strategy:</h4>
+                        {loadingAI ? (
+                            <div className="flex items-center text-blue-700">
+                                <svg className="animate-spin h-5 w-5 mr-3 text-blue-500" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                <span>Generating AI strategy...</span>
+                            </div>
+                        ) : (
+                            aiAnalysis ? (
+                                <div className="prose max-w-none">
+                                    <ReactMarkdown>{aiAnalysis}</ReactMarkdown>
+                                </div>
+                            ) : (
+                                <p className="text-gray-500">No AI strategy available.</p>
+                            )
+                        )}
+                    </div>
+
+                    <div className="flex space-x-2 mt-5 border-t border-gray-200 pt-5">
+                        <button
+                            onClick={() => { onEditTask(task); onClose(); }} // Pass task to onEditTask and close modal
+                            className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-200"
+                        >
+                            Edit
+                        </button>
+                        <button
+                            onClick={() => { onDeleteTask(task._id); onClose(); }} // Pass id to onDeleteTask and close modal
+                            className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-200"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+// --- End TaskDetailModal Component ---
+
+
 export default function TaskList({ onEditTask, refreshTrigger }) {
     const [tasks, setTasks] = useState([]);
     const [filter, setFilter] = useState('all');
     const [sortOrder, setSortOrder] = useState('dueDateAsc');
     const [searchTerm, setSearchTerm] = useState('');
-    const [categoryFilter, setCategoryFilter] = useState('all');
     const [eisenhowerFilter, setEisenhowerFilter] = useState('all');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [taskToDeleteId, setTaskToDeleteId] = useState(null);
     const [activeTab, setActiveTab] = useState('All');
-    const [selectedTask, setSelectedTask] = useState(null);
+    const [selectedTask, setSelectedTask] = useState(null); // State to hold the task selected for modal view
     const [manualRefreshKey, setManualRefreshKey] = useState(0);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [pendingChanges, setPendingChanges] = useState(getPendingChangesFromLocalStorage());
 
-    // --- New AI-related states (unchanged, just context) ---
+    // --- New AI-related states ---
     const [categoryInsights, setCategoryInsights] = useState({});
     const [loadingInsights, setLoadingInsights] = useState(false);
-    const [selectedTaskAIAnalysis, setSelectedTaskAIAnalysis] = useState('');
-    const [loadingTaskAI, setLoadingTaskAI] = useState(false);
+    const [selectedTaskAIAnalysis, setSelectedTaskAIAnalysis] = useState(''); // AI analysis for the selected task
+    const [loadingTaskAI, setLoadingTaskAI] = useState(false); // Loading state for single task AI analysis
     // --- End New AI-related states ---
 
     const categories = ['All', 'General', 'Web Development', 'Trading', 'Personal', 'Work', 'Study', 'Health'];
@@ -69,6 +189,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
     // Base URL for your backend API
     const API_BASE_URL = 'https://mydiffprojects.onrender.com/api'; // Ensure this matches your deployed backend URL
 
+    // --- Data Fetching Logic ---
     const fetchTasks = async (useLocalStorageOnly = false) => {
         setIsOnline(navigator.onLine); // Check online status before fetching
         if (useLocalStorageOnly || !isOnline) {
@@ -127,7 +248,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
     // Function to fetch AI strategy for a selected task using Gemini
     const fetchTaskAIStrategy = async (task) => {
         setLoadingTaskAI(true);
-        setSelectedTaskAIAnalysis('');
+        setSelectedTaskAIAnalysis(''); // Clear previous analysis
 
         try {
             const prompt = `Generate a detailed step-by-step plan or strategic approach to effectively complete the following task. Focus on practical steps, potential challenges, and optimal workflow. Provide the plan as a clear numbered list or bullet points.
@@ -155,7 +276,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
         }
     };
 
-    // Online/Offline Status Listener
+    // --- Effects for Data Loading and Syncing ---
     useEffect(() => {
         const handleOnline = () => setIsOnline(true);
         const handleOffline = () => setIsOnline(false);
@@ -168,7 +289,6 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
             window.removeEventListener('offline', handleOffline);
         };
     }, []);
-
 
     useEffect(() => {
         fetchTasks();
@@ -183,11 +303,11 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
         }
     }, [activeTab, tasks, fetchAIInsights]);
 
-    // Function to add/update pending changes for offline sync
+    // --- Offline Sync Logic ---
     const addPendingChange = (type, task) => {
         setPendingChanges(prev => {
             const newChanges = { ...prev };
-            // Remove from other categories if already present
+            // Remove from other categories if already present to avoid duplicates/conflicts
             newChanges.new = newChanges.new.filter(t => t._id !== task._id);
             newChanges.updated = newChanges.updated.filter(t => t._id !== task._id);
             newChanges.deleted = newChanges.deleted.filter(id => id !== task._id); // Ensure no old delete entry exists
@@ -195,7 +315,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
             if (type === 'new') {
                 newChanges.new.push(task);
             } else if (type === 'updated') {
-                // If it was originally new, keep it in new. Otherwise, add to updated.
+                // If it was originally a new task (offline created), keep it in 'new'. Otherwise, add to 'updated'.
                 if (!prev.new.some(t => t._id === task._id)) {
                     newChanges.updated.push(task);
                 }
@@ -247,6 +367,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
         for (const newTask of pendingChanges.new) {
             try {
                 // Remove the temporary _id for new tasks if your backend generates IDs
+                // Assuming your backend will assign a new _id upon creation
                 const { _id, ...taskData } = newTask;
                 await axios.post(`${API_BASE_URL}/tasks`, taskData);
                 clearPendingChanges('new', _id); // Clear using the temporary _id
@@ -277,7 +398,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
         }
     };
 
-
+    // --- Event Handlers ---
     const handleManualRefresh = () => {
         setManualRefreshKey(prevKey => prevKey + 1);
         fetchTasks(); // Explicitly fetch from API on manual refresh
@@ -293,7 +414,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
         // Optimistically update UI
         setTasks(prevTasks => prevTasks.map(t => t._id === task._id ? updatedTask : t));
         if (selectedTask && selectedTask._id === task._id) {
-            setSelectedTask(updatedTask);
+            setSelectedTask(updatedTask); // Update task in modal if it's open
         }
 
         if (isOnline) {
@@ -304,8 +425,6 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
             } catch (err) {
                 console.error('Failed to update task status via API, saving to pending changes:', err);
                 addPendingChange('updated', updatedTask);
-                // Revert optimistic update if API fails and not intended for offline work
-                // setTasks(prevTasks => prevTasks.map(t => t._id === task._id ? task : t));
                 alert('API update failed. Change saved locally for sync later.');
             }
         } else {
@@ -325,7 +444,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
         setTasks(prevTasks => prevTasks.filter(t => t._id !== idToDelete));
         setShowDeleteConfirm(false);
         setTaskToDeleteId(null);
-        setSelectedTask(null);
+        setSelectedTask(null); // Close modal if deleted task was open
 
         if (isOnline) {
             try {
@@ -348,6 +467,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
         setTaskToDeleteId(null);
     };
 
+    // --- Modal related handlers ---
     const handleCardClick = (task) => {
         setSelectedTask(task);
         fetchTaskAIStrategy(task); // Trigger Gemini analysis for the selected task
@@ -355,9 +475,10 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
 
     const closeDetailModal = () => {
         setSelectedTask(null);
-        setSelectedTaskAIAnalysis('');
+        setSelectedTaskAIAnalysis(''); // Clear AI analysis when closing modal
     };
 
+    // --- Styling Helper Functions ---
     const getPriorityColor = (priority) => {
         switch (priority) {
             case 'P1 - Critical': return 'bg-red-200 text-red-800 ring-red-300';
@@ -386,7 +507,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
         const now = new Date();
         const dueDate = new Date(task.dueDate);
         const isOverdue = dueDate < now && !task.completed;
-        const isDueSoon = !task.completed && dueDate >= now && (dueDate.getTime() - now.getTime()) < (3 * 24 * 60 * 60 * 1000);
+        const isDueSoon = !task.completed && dueDate >= now && (dueDate.getTime() - now.getTime()) < (3 * 24 * 60 * 60 * 1000); // Within 3 days
 
         let classes = {
             cardBg: 'bg-white',
@@ -411,8 +532,10 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
         return classes;
     };
 
+    // --- Task Sorting Logic ---
     const sortTasks = (taskList) => {
         return [...taskList].sort((a, b) => {
+            // Completed tasks always go to the bottom
             if (a.completed !== b.completed) {
                 return a.completed ? 1 : -1;
             }
@@ -422,10 +545,12 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
                 const now = new Date();
                 const dueDate = new Date(task.dueDate);
 
+                // Overdue tasks get highest urgency
                 if (dueDate < now && !task.completed) {
                     score += 1000;
                 }
 
+                // Eisenhower Quadrant contributes to urgency
                 if (task.eisenhowerQuadrant === 'Urgent/Important') {
                     score += 500;
                 } else if (task.eisenhowerQuadrant === 'Urgent/Not Important') {
@@ -434,18 +559,20 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
                     score += 100;
                 }
 
+                // Priority contributes to urgency
                 const priorityMapping = {
                     'P1 - Critical': 50, 'P2 - High': 40, 'P3 - Medium': 30, 'P4 - Low': 20, 'P5 - Very Low': 10,
                 };
                 score += priorityMapping[task.priority] || 0;
 
+                // Tasks due soon get higher urgency
                 const diffTime = dueDate.getTime() - now.getTime();
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
                 if (diffDays <= 1 && diffDays >= 0 && !task.completed) {
-                    score += 80;
+                    score += 80; // Due within 1 day
                 } else if (diffDays > 1 && diffDays <= 3 && !task.completed) {
-                    score += 60;
+                    score += 60; // Due within 3 days
                 }
 
                 return score;
@@ -454,10 +581,12 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
             const urgencyA = getUrgencyScore(a);
             const urgencyB = getUrgencyScore(b);
 
+            // Primary sort by urgency (highest first)
             if (urgencyA !== urgencyB) {
                 return urgencyB - urgencyA;
             }
 
+            // Secondary sort based on user's selected sort order if urgencies are equal
             const priorityOrder = {
                 'P1 - Critical': 5, 'P2 - High': 4, 'P3 - Medium': 3, 'P4 - Low': 2, 'P5 - Very Low': 1,
             };
@@ -474,10 +603,11 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
             if (sortOrder === 'priorityLow') {
                 return priorityOrder[a.priority] - priorityOrder[b.priority];
             }
-            return 0;
+            return 0; // No change in order if all criteria are equal
         });
     };
 
+    // --- Task Filtering Logic ---
     const clientFilteredTasks = tasks.filter(t => {
         const matchesStatus = (filter === 'completed' && t.completed) ||
             (filter === 'pending' && !t.completed) ||
@@ -491,6 +621,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
 
     const displayedTasks = sortTasks(clientFilteredTasks);
 
+    // --- Component Render ---
     return (
         <div className="bg-white shadow-2xl rounded-xl p-4 md:p-8 border border-gray-100">
             <div className="flex flex-col sm:flex-row justify-between items-center mb-6 md:mb-8 gap-3 md:gap-5">
@@ -588,7 +719,7 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
                 </div>
             </div>
 
-            {/* Category Tabs */}
+            {/* --- Category Tabs --- */}
             <div className="flex flex-wrap gap-2 md:gap-3 mb-6 border-b border-gray-200 pb-2 overflow-x-auto justify-center md:justify-start">
                 {categories.map(category => (
                     <button
@@ -607,114 +738,84 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
                 ))}
             </div>
 
-            {/* AI Insights for Category */}
-            {/* {activeTab && (
+            {/* --- AI Insights for Category --- */}
+            {activeTab && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                     <h3 className="text-lg font-bold text-blue-800 mb-2">
                         AI Insights for "{activeTab}" Category
                     </h3>
                     {loadingInsights ? (
                         <div className="flex items-center text-blue-700">
-                            <svg className="animate-spin h-5 w-5 mr-3 text-blue-500" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            <svg className="animate-spin h-5 w-5 mr-3 text-blue-500" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                             <span>Generating category insights...</span>
                         </div>
                     ) : (
-                        <div className="prose prose-sm max-w-none text-blue-900">
-                               <ReactMarkdown>{categoryInsights[activeTab] || 'No AI insights available. Select a category.'}</ReactMarkdown>
+                        <div className="prose max-w-none">
+                            <ReactMarkdown>{categoryInsights[activeTab] || 'No insights available for this category.'}</ReactMarkdown>
                         </div>
                     )}
                 </div>
-            )} */}
+            )}
 
-
+            {/* --- Task List Display --- */}
             {displayedTasks.length === 0 ? (
-                <div className="text-center py-12 md:py-16 text-gray-500 text-lg md:text-xl bg-gray-50 rounded-lg border border-gray-200 flex flex-col items-center justify-center">
-                    <svg className="text-4xl md:text-5xl mb-3 md:mb-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                    <p className="font-semibold">No tasks found!</p>
-                    <p className="text-sm">Try adjusting your filters or adding a new task above.</p>
-                </div>
+                <p className="text-center text-gray-500 text-lg py-10">No tasks found matching your criteria.</p>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {displayedTasks.map(task => {
-                        const cardStyles = getTaskCardStyles(task);
-                        const isPendingNew = pendingChanges.new.some(t => t._id === task._id);
-                        const isPendingUpdate = pendingChanges.updated.some(t => t._id === task._id);
-                        const isPendingDelete = pendingChanges.deleted.some(id => id === task._id);
-
-                        if (isPendingDelete) return null; // Don't show if marked for deletion
-
+                        const { cardBg, titleText, dueDateText } = getTaskCardStyles(task);
                         return (
                             <div
                                 key={task._id}
-                                className={`${cardStyles.cardBg} border border-gray-200 rounded-lg shadow-md p-4 flex flex-col justify-between
-                                    hover:shadow-lg transition-shadow duration-200 cursor-pointer relative group ${isPendingNew ? 'border-green-500 border-2' : ''} ${isPendingUpdate ? 'border-orange-500 border-2' : ''}`}
-                                onClick={() => handleCardClick(task)}
+                                className={`relative ${cardBg} p-5 rounded-lg shadow-md border border-gray-200 flex flex-col justify-between h-auto transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg group`}
                             >
-                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-5 transition-all duration-200 rounded-lg"></div>
-                                {(isPendingNew || isPendingUpdate) && (
-                                    <span className="absolute top-2 left-2 px-2 py-1 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full">
-                                        {isPendingNew ? 'Local: New' : 'Local: Unsynced'}
-                                    </span>
-                                )}
-
-                                <div>
-                                    <h3 className={`${cardStyles.titleText} font-bold text-lg mb-2`}>
+                                <div className="flex justify-between items-start mb-3">
+                                    <h3
+                                        className={`text-xl font-semibold cursor-pointer ${titleText} break-words pr-2`}
+                                        onClick={() => handleCardClick(task)} // Click title to open modal
+                                    >
                                         {task.title}
                                     </h3>
-                                    {task.description && (
-                                        <p className="text-gray-700 text-sm mb-3 line-clamp-2">
-                                            {task.description}
-                                        </p>
-                                    )}
-                                    <div className="flex flex-wrap items-center gap-2 mb-3 text-xs font-medium">
-                                        <span className={`px-2 py-0.5 rounded-full ring-1 ${getPriorityColor(task.priority)}`}>
-                                            {task.priority.split(' - ')[0]}
-                                        </span>
-                                        {task.category && (
-                                            <span className={`px-2 py-0.5 rounded-full ring-1 ${getCategoryTagColor(task.category)}`}>
-                                                {task.category}
-                                            </span>
-                                        )}
-                                        {task.eisenhowerQuadrant && (
-                                            <span className={`px-2 py-0.5 rounded-full ring-1 bg-indigo-50 text-indigo-700 ring-indigo-100`}>
-                                                {task.eisenhowerQuadrant.split('/')[0].slice(0, 1)}. {task.eisenhowerQuadrant.split('/')[1].slice(0, 1)}.
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="text-sm text-gray-600">
-                                        <span className="font-semibold">Due:</span>{' '}
-                                        <span className={`${cardStyles.dueDateText}`}>
-                                            {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                        </span>
-                                    </div>
+                                    {/* Checkbox visible on all screens */}
+                                    <input
+                                        type="checkbox"
+                                        checked={task.completed}
+                                        onChange={() => toggleComplete(task)}
+                                        className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+                                        title={task.completed ? "Mark as Pending" : "Mark as Complete"}
+                                    />
                                 </div>
-
-                                <div className="flex justify-end gap-2 mt-4">
+                                {/* These details are hidden on small screens, shown on medium and up */}
+                                <p className="text-gray-600 text-sm mb-4 flex-grow line-clamp-3 hidden md:block">{task.description}</p>
+                                <div className="flex flex-wrap gap-2 mb-4 hidden md:flex">
+                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ring-1 ring-inset ${getPriorityColor(task.priority)}`}>
+                                        {task.priority}
+                                    </span>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ring-1 ring-inset ${getCategoryTagColor(task.category)}`}>
+                                        {task.category}
+                                    </span>
+                                    {task.eisenhowerQuadrant && (
+                                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 ring-1 ring-inset ring-indigo-200">
+                                            {task.eisenhowerQuadrant}
+                                        </span>
+                                    )}
+                                </div>
+                                <p className={`text-sm ${dueDateText} font-medium mb-4 hidden md:block`}>
+                                    Due: {new Date(task.dueDate).toLocaleDateString()}
+                                </p>
+                                {/* Edit and Delete buttons hidden on small screens, shown on medium and up */}
+                                <div className="flex space-x-2 hidden md:flex">
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); toggleComplete(task); }}
-                                        className={`p-2 rounded-full transition-colors duration-200 transform hover:scale-110 active:scale-95
-                                            ${task.completed ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200' : 'bg-green-100 text-green-600 hover:bg-green-200'}`}
-                                        title={task.completed ? 'Mark as Pending' : 'Mark as Completed'}
+                                        onClick={() => onEditTask(task)}
+                                        className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-200"
                                     >
-                                        {task.completed ? (
-                                            <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
-                                        ) : (
-                                            <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                                        )}
+                                        Edit
                                     </button>
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); onEditTask(task); }}
-                                        className="p-2 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors duration-200 transform hover:scale-110 active:scale-95"
-                                        title="Edit Task"
+                                        onClick={() => handleDeleteClick(task._id)}
+                                        className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-200"
                                     >
-                                        <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                    </button>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); handleDeleteClick(task._id); }}
-                                        className="p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors duration-200 transform hover:scale-110 active:scale-95"
-                                        title="Delete Task"
-                                    >
-                                        <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                        Delete
                                     </button>
                                 </div>
                             </div>
@@ -723,122 +824,40 @@ export default function TaskList({ onEditTask, refreshTrigger }) {
                 </div>
             )}
 
-            {/* Task Detail Modal */}
-            {selectedTask && (
-                <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fade-in">
-                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md md:max-w-lg lg:max-w-xl transform scale-100 opacity-100 animate-zoom-in relative">
-                        <button
-                            onClick={closeDetailModal}
-                            className="absolute top-3 right-3 p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors duration-200"
-                            title="Close"
-                        >
-                            <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        </button>
-
-                        <h3 className="text-2xl font-bold text-gray-900 mb-4 break-words">{selectedTask.title}</h3>
-
-                        {selectedTask.description && (
-                            <div className="mb-4 bg-gray-50 p-3 rounded-md border border-gray-200">
-                                <p className="font-semibold text-gray-700 mb-1">Description:</p>
-                                <p className="text-gray-800 whitespace-pre-wrap">{selectedTask.description}</p>
-                            </div>
-                        )}
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                            <div>
-                                <p className="font-semibold text-gray-700 mb-1">Due Date:</p>
-                                <p className="text-gray-800 text-base">
-                                    {new Date(selectedTask.dueDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="font-semibold text-gray-700 mb-1">Priority:</p>
-                                <span className={`px-3 py-1 text-sm font-semibold rounded-full ${getPriorityColor(selectedTask.priority)}`}>
-                                    {selectedTask.priority}
-                                </span>
-                            </div>
-                            {selectedTask.category && (
-                                <div>
-                                    <p className="font-semibold text-gray-700 mb-1">Category:</p>
-                                    <span className={`px-3 py-1 text-sm font-semibold rounded-full ${getCategoryTagColor(selectedTask.category)}`}>
-                                        {selectedTask.category}
-                                    </span>
-                                </div>
-                            )}
-                            {selectedTask.eisenhowerQuadrant && (
-                                <div>
-                                    <p className="font-semibold text-gray-700 mb-1">Eisenhower Quadrant:</p>
-                                    <span className="px-3 py-1 text-sm font-semibold rounded-full bg-indigo-100 text-indigo-700">
-                                        {selectedTask.eisenhowerQuadrant}
-                                    </span>
-                                </div>
-                            )}
-                            <div>
-                                <p className="font-semibold text-gray-700 mb-1">Status:</p>
-                                <span className={`px-3 py-1 text-sm font-semibold rounded-full ${selectedTask.completed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                    {selectedTask.completed ? 'Completed' : 'Pending'}
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* AI Strategy for Selected Task */}
-                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mt-4">
-                            <h4 className="text-lg font-bold text-purple-800 mb-2">AI Strategic Plan</h4>
-                            {loadingTaskAI ? (
-                                <div className="flex items-center text-purple-700">
-                                    <svg className="animate-spin h-5 w-5 mr-3 text-purple-500" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                    <span>Generating strategic plan...</span>
-                                </div>
-                            ) : (
-                                <div className="prose prose-sm max-w-none text-purple-900">
-                                    <ReactMarkdown>{selectedTaskAIAnalysis || 'No strategic plan available for this task.'}</ReactMarkdown>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex justify-end gap-3 mt-6">
+            {/* --- Delete Confirmation Modal --- */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4">
+                    <div className="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full text-center">
+                        <h3 className="text-xl font-bold mb-4 text-gray-800">Confirm Deletion</h3>
+                        <p className="text-gray-700 mb-6">Are you sure you want to delete this task? This action cannot be undone.</p>
+                        <div className="flex justify-around gap-4">
                             <button
-                                onClick={(e) => { e.stopPropagation(); onEditTask(selectedTask); closeDetailModal(); }}
-                                className="px-5 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors duration-200 flex items-center gap-2"
+                                onClick={handleConfirmDelete}
+                                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
                             >
-                                <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                Edit
-                            </button>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); handleDeleteClick(selectedTask._id); closeDetailModal(); }}
-                                className="px-5 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors duration-200 flex items-center gap-2"
-                            >
-                                <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                                 Delete
                             </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Delete Confirmation Modal */}
-            {showDeleteConfirm && (
-                <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fade-in">
-                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm transform scale-100 opacity-100 animate-zoom-in">
-                        <h3 className="text-xl font-bold text-gray-900 mb-4">Confirm Deletion</h3>
-                        <p className="text-gray-700 mb-6">Are you sure you want to delete this task? This action cannot be undone.</p>
-                        <div className="flex justify-end gap-3">
                             <button
                                 onClick={handleCancelDelete}
-                                className="px-5 py-2 rounded-lg bg-gray-300 text-gray-800 font-medium hover:bg-gray-400 transition-colors duration-200"
+                                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors duration-200"
                             >
                                 Cancel
                             </button>
-                            <button
-                                onClick={handleConfirmDelete}
-                                className="px-5 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors duration-200"
-                            >
-                                Delete
-                            </button>
                         </div>
                     </div>
                 </div>
             )}
+
+            {/* --- Task Detail Modal (for mobile/on-click) --- */}
+            <TaskDetailModal
+                task={selectedTask}
+                aiAnalysis={selectedTaskAIAnalysis}
+                loadingAI={loadingTaskAI}
+                onClose={closeDetailModal}
+                onEditTask={onEditTask} // Pass onEditTask to the modal
+                onDeleteTask={handleDeleteClick} // Pass handleDeleteClick to the modal
+                toggleComplete={toggleComplete} // Pass toggleComplete to the modal
+            />
         </div>
     );
 }
