@@ -80,41 +80,49 @@ export default function TaskList() {
 
     const categories = ['All Tasks', 'General', 'Web Development', 'Trading', 'Personal', 'Work', 'Study', 'Health'];
 
-    // Helper function to update pending changes
-    const addPendingChange = useCallback((type, taskData) => {
-        setPendingChanges(prevChanges => {
-            let newChanges = { ...prevChanges };
 
-            if (type === 'added') {
-                newChanges.added.push(taskData);
-            } else if (type === 'updated') {
-                // If an item is in 'added' and now updated, update it there.
-                // Otherwise, add/update in 'updated' list.
-                const addedIndex = newChanges.added.findIndex(t => t._id === taskData._id);
-                if (addedIndex !== -1) {
-                    newChanges.added[addedIndex] = taskData;
+   // Helper function to update pending changes
+const addPendingChange = useCallback((type, taskData) => {
+    setPendingChanges(prevChanges => {
+        // Ensure prevChanges is an object and its properties are arrays
+        const safePrevChanges = {
+            added: prevChanges?.added || [],
+            updated: prevChanges?.updated || [],
+            deleted: prevChanges?.deleted || [],
+        };
+
+        let newChanges = { ...safePrevChanges }; // Use the safely initialized prevChanges
+
+        if (type === 'added') {
+            newChanges.added.push(taskData);
+        } else if (type === 'updated') {
+            // If an item is in 'added' and now updated, update it there.
+            // Otherwise, add/update in 'updated' list.
+            const addedIndex = newChanges.added.findIndex(t => t._id === taskData._id);
+            if (addedIndex !== -1) {
+                newChanges.added[addedIndex] = taskData;
+            } else {
+                const updatedIndex = newChanges.updated.findIndex(t => t._id === taskData._id);
+                if (updatedIndex !== -1) {
+                    newChanges.updated[updatedIndex] = taskData;
                 } else {
-                    const updatedIndex = newChanges.updated.findIndex(t => t._id === taskData._id);
-                    if (updatedIndex !== -1) {
-                        newChanges.updated[updatedIndex] = taskData;
-                    } else {
-                        newChanges.updated.push(taskData);
-                    }
-                }
-            } else if (type === 'deleted') {
-                // Remove from 'added' if it was pending add
-                newChanges.added = newChanges.added.filter(t => t._id !== taskData);
-                // Remove from 'updated' if it was pending update
-                newChanges.updated = newChanges.updated.filter(t => t._id !== taskData);
-                // Add to 'deleted'
-                if (!newChanges.deleted.includes(taskData)) {
-                    newChanges.deleted.push(taskData);
+                    newChanges.updated.push(taskData);
                 }
             }
-            savePendingChangesToLocalStorage(newChanges);
-            return newChanges;
-        });
-    }, []);
+        } else if (type === 'deleted') {
+            // Remove from 'added' if it was pending add
+            newChanges.added = newChanges.added.filter(t => t._id !== taskData);
+            // Remove from 'updated' if it was pending update
+            newChanges.updated = newChanges.updated.filter(t => t._id !== taskData);
+            // Add to 'deleted'
+            if (!newChanges.deleted.includes(taskData)) {
+                newChanges.deleted.push(taskData);
+            }
+        }
+        savePendingChangesToLocalStorage(newChanges);
+        return newChanges;
+    });
+}, []); // Dependencies remain the same
 
     // Fetch tasks from API
     const fetchTasks = useCallback(async () => {
@@ -221,29 +229,29 @@ export default function TaskList() {
     }, []);
 
     // Fetch AI insights for a given category
-    const fetchCategoryInsights = useCallback(async (category) => {
-        if (category === 'All Tasks' || categoryInsights[category]) {
-            setLoadingInsights(false);
-            return;
-        }
+    // const fetchCategoryInsights = useCallback(async (category) => {
+    //     if (category === 'All Tasks' || categoryInsights[category]) {
+    //         setLoadingInsights(false);
+    //         return;
+    //     }
 
-        setLoadingInsights(true);
-        try {
-            const response = await axios.post('https://mydiffprojects.onrender.com/api/ai-insights', { category });
-            setCategoryInsights(prev => ({ ...prev, [category]: response.data.insight }));
-        } catch (error) {
-            console.error(`Error fetching insights for ${category}:`, error);
-            setCategoryInsights(prev => ({ ...prev, [category]: 'Failed to load insights for this category.' }));
-            toast.error(`Failed to load AI insights for ${category}.`);
-        } finally {
-            setLoadingInsights(false);
-        }
-    }, [categoryInsights]);
+    //     setLoadingInsights(true);
+    //     try {
+    //         const response = await axios.post('https://mydiffprojects.onrender.com/api/ai-insights', { category });
+    //         setCategoryInsights(prev => ({ ...prev, [category]: response.data.insight }));
+    //     } catch (error) {
+    //         console.error(`Error fetching insights for ${category}:`, error);
+    //         setCategoryInsights(prev => ({ ...prev, [category]: 'Failed to load insights for this category.' }));
+    //         toast.error(`Failed to load AI insights for ${category}.`);
+    //     } finally {
+    //         setLoadingInsights(false);
+    //     }
+    // }, [categoryInsights]);  
 
     // Effect to fetch insights when the active tab changes
-    useEffect(() => {
-        fetchCategoryInsights(activeTab);
-    }, [activeTab, fetchCategoryInsights]);
+    // useEffect(() => {
+    //     fetchCategoryInsights(activeTab);
+    // }, [activeTab, fetchCategoryInsights]);
 
 
     // --- CRUD Operations Handlers ---
@@ -618,7 +626,7 @@ export default function TaskList() {
                 </div>
 
                 {/* --- AI Insights for Category --- */}
-                {activeTab && (
+                {/* {activeTab && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                         <h3 className="text-lg font-bold text-blue-800 mb-2">
                             AI Insights for "{activeTab}" Category
@@ -634,7 +642,7 @@ export default function TaskList() {
                             </div>
                         )}
                     </div>
-                )}
+                )} */}
 
                 {/* --- Task List Display --- */}
                 {displayedTasks.length === 0 ? (
