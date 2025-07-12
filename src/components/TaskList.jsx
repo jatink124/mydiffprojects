@@ -14,6 +14,10 @@ import TaskForm from './TaskForm';
 import TaskDetailModal from './TaskDetailModal';
 import TaskCard from './TaskCard'; // Import the TaskCard component
 
+// --- Define your API Base URL here ---
+const API_BASE_URL = 'https://mydiffprojects.onrender.com/api';
+// ---
+
 // Helper functions for Local Storage
 const LOCAL_STORAGE_KEY = 'taskListData';
 const LOCAL_STORAGE_PENDING_CHANGES_KEY = 'taskListPendingChanges';
@@ -146,7 +150,7 @@ export default function TaskList() {
         setLoading(true);
         setError(null);
         try {
-            const response = await axios.get('http://localhost:5000/api/tasks');
+            const response = await axios.get(`${API_BASE_URL}/tasks`);
             const fetchedTasks = response.data;
             setTasks(fetchedTasks);
             saveTasksToLocalStorage(fetchedTasks);
@@ -183,7 +187,7 @@ export default function TaskList() {
             // Process deletions first
             for (const id of deleted) {
                 try {
-                    await axios.delete(`http://localhost:5000/api/tasks/${id}`);
+                    await axios.delete(`${API_BASE_URL}/tasks/${id}`);
                     successfulSync.deleted.push(id);
                     setTasks(prevTasks => prevTasks.filter(task => task._id !== id));
                     removePendingChange('deleted', id); // Remove from pending
@@ -197,7 +201,7 @@ export default function TaskList() {
             for (const taskData of added) {
                 try {
                     const { _id: tempId, ...rest } = taskData; // Remove temporary _id
-                    const response = await axios.post('http://localhost:5000/api/tasks', rest);
+                    const response = await axios.post(`${API_BASE_URL}/tasks`, rest);
                     const serverTask = response.data;
 
                     setTasks(prevTasks => {
@@ -215,7 +219,7 @@ export default function TaskList() {
             // Process updates
             for (const taskData of updated) {
                 try {
-                    await axios.put(`http://localhost:5000/api/tasks/${taskData._id}`, taskData);
+                    await axios.put(`${API_BASE_URL}/tasks/${taskData._id}`, taskData);
                     successfulSync.updated.push(taskData._id);
                     setTasks(prevTasks => prevTasks.map(task => task._id === taskData._id ? taskData : task));
                     removePendingChange('updated', taskData._id); // Remove from pending
@@ -263,7 +267,7 @@ export default function TaskList() {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
         };
-    }, [fetchTasks, syncDataWithAPI]); // Removed pendingChanges from dependencies to avoid infinite loop from within the effect
+    }, [fetchTasks, syncDataWithAPI]);
 
     // Save tasks to local storage whenever they change (this is for the main task list)
     useEffect(() => {
@@ -276,7 +280,7 @@ export default function TaskList() {
     const addTask = useCallback(async (newTaskData) => {
         if (isOnline) {
             try {
-                const response = await axios.post('http://localhost:5000/api/tasks', newTaskData);
+                const response = await axios.post(`${API_BASE_URL}/tasks`, newTaskData);
                 const serverTask = response.data;
                 setTasks(prevTasks => [...prevTasks, serverTask]);
                 toast.success('Task added successfully (online)!');
@@ -304,7 +308,7 @@ export default function TaskList() {
     const updateTask = useCallback(async (updatedTaskData) => {
         if (isOnline) {
             try {
-                const response = await axios.put(`http://localhost:5000/api/tasks/${updatedTaskData._id}`, updatedTaskData);
+                const response = await axios.put(`${API_BASE_URL}/tasks/${updatedTaskData._id}`, updatedTaskData);
                 const serverTask = response.data;
                 setTasks(prevTasks =>
                     prevTasks.map(task =>
@@ -353,7 +357,7 @@ export default function TaskList() {
 
         if (isOnline) {
             try {
-                await axios.delete(`http://localhost:5000/api/tasks/${taskIdToDelete}`);
+                await axios.delete(`${API_BASE_URL}/tasks/${taskIdToDelete}`);
                 toast.success('Task deleted successfully from server!');
                 // No need to remove from pending if successful, it was never added there in online mode
             } catch (error) {
@@ -382,7 +386,7 @@ export default function TaskList() {
         setLoadingTaskAI(true);
         setSelectedTaskAIAnalysis('');
         try {
-            const response = await axios.post('http://localhost:5000/api/ai-task-analysis', {
+            const response = await axios.post(`${API_BASE_URL}/ai-task-analysis`, {
                 taskTitle: task.title,
                 taskDescription: task.description,
                 taskDueDate: task.dueDate,
@@ -536,7 +540,7 @@ export default function TaskList() {
                     <button
                         onClick={handleAddTaskClick}
                         className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-lg
-                                     hover:bg-indigo-700 transition-colors duration-300 transform hover:scale-[1.03] active:scale-[0.97]"
+                                   hover:bg-indigo-700 transition-colors duration-300 transform hover:scale-[1.03] active:scale-[0.97]"
                     >
                         <FiPlusCircle className="text-xl" /> Add New Task
                     </button>
@@ -652,52 +656,52 @@ export default function TaskList() {
                             />
                         ))
                     ) : (
-                        <div className="col-span-1 sm:col-span-2 lg:col-span-3 text-center py-12 bg-white rounded-lg shadow-md text-gray-600 text-lg">
-                            No tasks found for the current filters.
-                        </div>
+                        <p className="text-center text-gray-600 text-lg col-span-full py-8">
+                            No tasks found matching your criteria.
+                        </p>
                     )}
                 </div>
-            </div>
 
-            {/* Modals */}
-            <TaskForm
-                isOpen={showTaskFormModal}
-                onClose={handleTaskFormCancel}
-                onSave={taskToEdit ? updateTask : addTask}
-                taskToEdit={taskToEdit}
-            />
+                {/* --- Modals --- */}
+                <TaskForm
+                    isOpen={showTaskFormModal}
+                    onClose={handleTaskFormCancel}
+                    onSave={taskToEdit ? updateTask : addTask} // Pass correct function based on mode
+                    taskToEdit={taskToEdit}
+                />
 
-            <TaskDetailModal
-                task={selectedTask}
-                aiAnalysis={selectedTaskAIAnalysis}
-                loadingAI={loadingTaskAI}
-                isOpen={!!selectedTask}
-                onClose={closeDetailModal}
-                onEditTask={handleEditTask}
-                onDeleteTask={handleDeleteClick}
-            />
+                <TaskDetailModal
+                    isOpen={!!selectedTask}
+                    onClose={closeDetailModal}
+                    task={selectedTask}
+                    aiAnalysis={selectedTaskAIAnalysis}
+                    loadingAI={loadingTaskAI}
+                    onEdit={handleEditTask}
+                    onDelete={handleDeleteClick}
+                />
 
-            {/* Delete Confirmation Modal */}
-            <Modal isOpen={showDeleteConfirm} onClose={handleCancelDelete}>
-                <div className="p-6 text-center">
-                    <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h3>
-                    <p className="text-gray-700 mb-6">Are you sure you want to delete this task? This action cannot be undone.</p>
-                    <div className="flex justify-center space-x-4">
-                        <button
-                            onClick={handleCancelDelete}
-                            className="px-5 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleConfirmDelete}
-                            className="px-5 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                        >
-                            Delete
-                        </button>
+                {/* Delete Confirmation Modal */}
+                <Modal isOpen={showDeleteConfirm} onClose={handleCancelDelete}>
+                    <div className="p-6 bg-white rounded-lg shadow-xl text-center">
+                        <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h3>
+                        <p className="text-gray-700 mb-6">Are you sure you want to delete this task? This action cannot be undone.</p>
+                        <div className="flex justify-center gap-4">
+                            <button
+                                onClick={handleCancelDelete}
+                                className="px-6 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmDelete}
+                                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                            >
+                                Delete
+                            </button>
+                        </div>
                     </div>
-                </div>
-            </Modal>
+                </Modal>
+            </div>
         </div>
     );
 }
