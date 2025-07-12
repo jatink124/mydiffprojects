@@ -1,9 +1,9 @@
-// components/TaskDetailModal.jsx
-import React, { useEffect } from 'react';
+// src/components/TaskDetailModal.jsx
+import React from 'react';
 import { FiEdit3, FiTrash2 } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
 
-const TaskDetailModal = ({ task, aiAnalysis, loadingAI, onClose, onEditTask, onDeleteTask, toggleComplete }) => {
+const TaskDetailModal = ({ task, aiAnalysis, loadingAI, onClose, onEditTask, onDeleteTask }) => { // Removed toggleComplete prop
     if (!task) return null; // Don't render if no task is selected
 
     const handleEditClick = () => {
@@ -16,9 +16,7 @@ const TaskDetailModal = ({ task, aiAnalysis, loadingAI, onClose, onEditTask, onD
         onDeleteTask(task._id); // Then trigger delete confirmation in parent
     };
 
-    const handleCheckboxChange = () => {
-        toggleComplete(task); // Toggle complete status directly
-    };
+    // Removed handleCheckboxChange as the checkbox is removed
 
     return (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-60 p-4" onClick={onClose}>
@@ -44,15 +42,10 @@ const TaskDetailModal = ({ task, aiAnalysis, loadingAI, onClose, onEditTask, onD
                             <strong className="font-semibold">Eisenhower Quadrant:</strong> {task.eisenhowerQuadrant}
                         </p>
                     )}
-                    <div className="flex items-center text-sm">
-                        <input
-                            type="checkbox"
-                            checked={task.completed}
-                            onChange={handleCheckboxChange}
-                            className="form-checkbox h-4 w-4 text-blue-600 rounded mr-2"
-                        />
-                        <label className="font-semibold">Completed:</label> {task.completed ? 'Yes' : 'No'}
-                    </div>
+                    {/* Removed the checkbox and its associated label */}
+                    <p className="text-sm">
+                        <strong className="font-semibold">Completed:</strong> {task.completed ? 'Yes' : 'No'}
+                    </p>
 
                     <p className="text-gray-800 font-medium text-lg mt-4">Description:</p>
                     <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">{task.description || 'No description provided.'}</p>

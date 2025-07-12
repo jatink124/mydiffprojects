@@ -1,16 +1,18 @@
+// src/components/TaskList.js
 import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// Import icons (assuming FiPlusCircle is from react-icons/fi)
-import { FiPlusCircle } from 'react-icons/fi'; // Add this import
+// Import icons
+import { FiPlusCircle } from 'react-icons/fi';
 
 // Import your Modal and TaskForm components
 import Modal from './Modal';
 import TaskForm from './TaskForm';
 import TaskDetailModal from './TaskDetailModal';
+import TaskCard from './TaskCard'; // Import the TaskCard component
 
 // Helper functions for Local Storage
 const LOCAL_STORAGE_KEY = 'taskListData';
@@ -37,7 +39,12 @@ const saveTasksToLocalStorage = (tasks) => {
 const getPendingChangesFromLocalStorage = () => {
     try {
         const data = localStorage.getItem(LOCAL_STORAGE_PENDING_CHANGES_KEY);
-        return data ? JSON.parse(data) : { added: [], updated: [], deleted: [] };
+        const parsedData = data ? JSON.parse(data) : {};
+        return {
+            added: parsedData.added || [],
+            updated: parsedData.updated || [],
+            deleted: parsedData.deleted || []
+        };
     } catch (error) {
         console.error("Error parsing pending changes from local storage:", error);
         return { added: [], updated: [], deleted: [] };
@@ -60,76 +67,86 @@ export default function TaskList() {
     const [statusFilter, setStatusFilter] = useState('all');
     const [eisenhowerFilter, setEisenhowerFilter] = useState('all');
     const [sortOrder, setSortOrder] = useState('dueDateAsc');
-    const [activeTab, setActiveTab] = useState('All Tasks'); // Default active tab
-    const [categoryInsights, setCategoryInsights] = useState({});
-    const [loadingInsights, setLoadingInsights] = useState(false);
+    const [activeTab, setActiveTab] = useState('All Tasks');
     const [isOnline, setIsOnline] = useState(navigator.onLine);
 
     // State for Modals
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [taskIdToDelete, setTaskIdToDelete] = useState(null);
-    const [selectedTask, setSelectedTask] = useState(null); // For TaskDetailModal
+    const [selectedTask, setSelectedTask] = useState(null);
     const [selectedTaskAIAnalysis, setSelectedTaskAIAnalysis] = useState('');
     const [loadingTaskAI, setLoadingTaskAI] = useState(false);
 
     // State for Add/Edit Task Modal (using TaskForm)
     const [showTaskFormModal, setShowTaskFormModal] = useState(false);
-    const [taskToEdit, setTaskToEdit] = useState(null); // The task object being edited
+    const [taskToEdit, setTaskToEdit] = useState(null);
 
     const [pendingChanges, setPendingChanges] = useState(getPendingChangesFromLocalStorage());
 
     const categories = ['All Tasks', 'General', 'Web Development', 'Trading', 'Personal', 'Work', 'Study', 'Health'];
 
+    // Helper function to update pending changes
+    const addPendingChange = useCallback((type, taskDataOrId) => {
+        setPendingChanges(prevChanges => {
+            const safePrevChanges = {
+                added: prevChanges?.added || [],
+                updated: prevChanges?.updated || [],
+                deleted: prevChanges?.deleted || [],
+            };
 
-   // Helper function to update pending changes
-const addPendingChange = useCallback((type, taskData) => {
-    setPendingChanges(prevChanges => {
-        // Ensure prevChanges is an object and its properties are arrays
-        const safePrevChanges = {
-            added: prevChanges?.added || [],
-            updated: prevChanges?.updated || [],
-            deleted: prevChanges?.deleted || [],
-        };
+            let newChanges = { ...safePrevChanges };
 
-        let newChanges = { ...safePrevChanges }; // Use the safely initialized prevChanges
-
-        if (type === 'added') {
-            newChanges.added.push(taskData);
-        } else if (type === 'updated') {
-            // If an item is in 'added' and now updated, update it there.
-            // Otherwise, add/update in 'updated' list.
-            const addedIndex = newChanges.added.findIndex(t => t._id === taskData._id);
-            if (addedIndex !== -1) {
-                newChanges.added[addedIndex] = taskData;
-            } else {
-                const updatedIndex = newChanges.updated.findIndex(t => t._id === taskData._id);
-                if (updatedIndex !== -1) {
-                    newChanges.updated[updatedIndex] = taskData;
+            if (type === 'added') {
+                newChanges.added.push(taskDataOrId);
+            } else if (type === 'updated') {
+                const taskId = taskDataOrId._id;
+                const addedIndex = newChanges.added.findIndex(t => t._id === taskId);
+                if (addedIndex !== -1) {
+                    newChanges.added[addedIndex] = taskDataOrId;
                 } else {
-                    newChanges.updated.push(taskData);
+                    const updatedIndex = newChanges.updated.findIndex(t => t._id === taskId);
+                    if (updatedIndex !== -1) {
+                        newChanges.updated[updatedIndex] = taskDataOrId;
+                    } else {
+                        if (!newChanges.deleted.includes(taskId)) {
+                            newChanges.updated.push(taskDataOrId);
+                        }
+                    }
+                }
+            } else if (type === 'deleted') {
+                const taskId = taskDataOrId;
+                newChanges.added = newChanges.added.filter(t => t._id !== taskId);
+                newChanges.updated = newChanges.updated.filter(t => t._id !== taskId);
+                if (!newChanges.deleted.includes(taskId)) {
+                    newChanges.deleted.push(taskId);
                 }
             }
-        } else if (type === 'deleted') {
-            // Remove from 'added' if it was pending add
-            newChanges.added = newChanges.added.filter(t => t._id !== taskData);
-            // Remove from 'updated' if it was pending update
-            newChanges.updated = newChanges.updated.filter(t => t._id !== taskData);
-            // Add to 'deleted'
-            if (!newChanges.deleted.includes(taskData)) {
-                newChanges.deleted.push(taskData);
+            savePendingChangesToLocalStorage(newChanges);
+            return newChanges;
+        });
+    }, []);
+
+    const removePendingChange = useCallback((type, id) => {
+        setPendingChanges(prevChanges => {
+            let newChanges = { ...prevChanges };
+            if (type === 'added') {
+                newChanges.added = newChanges.added.filter(task => task._id !== id);
+            } else if (type === 'updated') {
+                newChanges.updated = newChanges.updated.filter(task => task._id !== id);
+            } else if (type === 'deleted') {
+                newChanges.deleted = newChanges.deleted.filter(_id => _id !== id);
             }
-        }
-        savePendingChangesToLocalStorage(newChanges);
-        return newChanges;
-    });
-}, []); // Dependencies remain the same
+            savePendingChangesToLocalStorage(newChanges);
+            return newChanges;
+        });
+    }, []);
 
     // Fetch tasks from API
     const fetchTasks = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await axios.get('https://mydiffprojects.onrender.com/api/tasks');
+            const response = await axios.get('http://localhost:5000/api/tasks');
             const fetchedTasks = response.data;
             setTasks(fetchedTasks);
             saveTasksToLocalStorage(fetchedTasks);
@@ -138,7 +155,7 @@ const addPendingChange = useCallback((type, taskData) => {
             console.error('Failed to fetch tasks:', err);
             setError('Failed to load tasks. Please check your network connection.');
             toast.error('Failed to fetch tasks. Loading local data.');
-            setTasks(getTasksFromLocalStorage()); // Load from local storage on fetch error
+            setTasks(getTasksFromLocalStorage());
         } finally {
             setLoading(false);
         }
@@ -151,45 +168,75 @@ const addPendingChange = useCallback((type, taskData) => {
             return;
         }
 
-        const { added, updated, deleted } = pendingChanges;
+        let currentPendingChanges = getPendingChangesFromLocalStorage();
+        const { added, updated, deleted } = currentPendingChanges;
+
         if (added.length === 0 && updated.length === 0 && deleted.length === 0) {
             toast.info('No pending changes to sync.');
             return;
         }
 
+        toast.info('Attempting to sync pending changes...');
+        let successfulSync = { added: [], updated: [], deleted: [] };
+
         try {
             // Process deletions first
             for (const id of deleted) {
-                await axios.delete(`https://mydiffprojects.onrender.com/api/tasks/${id}`);
-                setTasks(prevTasks => prevTasks.filter(task => task._id !== id));
+                try {
+                    await axios.delete(`http://localhost:5000/api/tasks/${id}`);
+                    successfulSync.deleted.push(id);
+                    setTasks(prevTasks => prevTasks.filter(task => task._id !== id));
+                    removePendingChange('deleted', id); // Remove from pending
+                } catch (deleteErr) {
+                    console.error(`Failed to delete task ${id}:`, deleteErr);
+                    toast.error(`Failed to delete task ${id}.`);
+                }
             }
 
             // Process additions
             for (const taskData of added) {
-                const { _id, ...rest } = taskData; // Remove temporary _id
-                const response = await axios.post('https://mydiffprojects.onrender.com/api/tasks', rest);
-                setTasks(prevTasks => {
-                    // Replace the locally added task with the one from the server (which has a real _id)
-                    return prevTasks.map(task => task._id === _id ? response.data : task);
-                });
+                try {
+                    const { _id: tempId, ...rest } = taskData; // Remove temporary _id
+                    const response = await axios.post('http://localhost:5000/api/tasks', rest);
+                    const serverTask = response.data;
+
+                    setTasks(prevTasks => {
+                        // Replace the locally added task (with tempId) with the one from the server (with real _id)
+                        return prevTasks.map(task => task._id === tempId ? serverTask : task);
+                    });
+                    successfulSync.added.push(tempId);
+                    removePendingChange('added', tempId); // Remove original temp ID from pending
+                } catch (addErr) {
+                    console.error(`Failed to add task ${taskData.title}:`, addErr);
+                    toast.error(`Failed to add task ${taskData.title}.`);
+                }
             }
 
             // Process updates
             for (const taskData of updated) {
-                await axios.put(`https://mydiffprojects.onrender.com/api/tasks/${taskData._id}`, taskData);
-                setTasks(prevTasks => prevTasks.map(task => task._id === taskData._id ? taskData : task));
+                try {
+                    await axios.put(`http://localhost:5000/api/tasks/${taskData._id}`, taskData);
+                    successfulSync.updated.push(taskData._id);
+                    setTasks(prevTasks => prevTasks.map(task => task._id === taskData._id ? taskData : task));
+                    removePendingChange('updated', taskData._id); // Remove from pending
+                } catch (updateErr) {
+                    console.error(`Failed to update task ${taskData.title}:`, updateErr);
+                    toast.error(`Failed to update task ${taskData.title}.`);
+                }
             }
 
-            // Clear pending changes after successful sync
-            setPendingChanges({ added: [], updated: [], deleted: [] });
-            savePendingChangesToLocalStorage({ added: [], updated: [], deleted: [] });
-            toast.success('All pending changes synced successfully!');
+            const remainingChanges = getPendingChangesFromLocalStorage(); // Re-check after attempts
+            if (remainingChanges.added.length === 0 && remainingChanges.updated.length === 0 && remainingChanges.deleted.length === 0) {
+                toast.success('All pending changes synced successfully!');
+            } else {
+                toast.warn('Some changes could not be synced. Check console for details.');
+            }
             fetchTasks(); // Re-fetch to ensure data consistency
         } catch (error) {
-            console.error('Error syncing data with API:', error);
-            toast.error('Failed to sync some changes. Please try again.');
+            console.error('Error during sync process:', error);
+            toast.error('An error occurred during sync. Some changes might not have been applied.');
         }
-    }, [pendingChanges, isOnline, fetchTasks]);
+    }, [isOnline, removePendingChange, fetchTasks]);
 
 
     // Effect to load tasks on component mount and set up online/offline listeners
@@ -199,8 +246,8 @@ const addPendingChange = useCallback((type, taskData) => {
         const handleOnline = () => {
             setIsOnline(true);
             toast.info('You are back online!');
-            // Optionally, trigger sync immediately when back online
-            if (Object.values(pendingChanges).flat().length > 0) {
+            // Only sync if there are actual pending changes
+            if (Object.values(getPendingChangesFromLocalStorage()).flat().length > 0) {
                 syncDataWithAPI();
             }
         };
@@ -216,66 +263,80 @@ const addPendingChange = useCallback((type, taskData) => {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
         };
-    }, [fetchTasks, syncDataWithAPI, pendingChanges]); // Add pendingChanges to dependencies
+    }, [fetchTasks, syncDataWithAPI]); // Removed pendingChanges from dependencies to avoid infinite loop from within the effect
 
-    // Save tasks to local storage whenever they change
+    // Save tasks to local storage whenever they change (this is for the main task list)
     useEffect(() => {
         saveTasksToLocalStorage(tasks);
     }, [tasks]);
 
-    // Handle network status changes
-    useEffect(() => {
-        setIsOnline(navigator.onLine);
-    }, []);
-
-    // Fetch AI insights for a given category
-    // const fetchCategoryInsights = useCallback(async (category) => {
-    //     if (category === 'All Tasks' || categoryInsights[category]) {
-    //         setLoadingInsights(false);
-    //         return;
-    //     }
-
-    //     setLoadingInsights(true);
-    //     try {
-    //         const response = await axios.post('https://mydiffprojects.onrender.com/api/ai-insights', { category });
-    //         setCategoryInsights(prev => ({ ...prev, [category]: response.data.insight }));
-    //     } catch (error) {
-    //         console.error(`Error fetching insights for ${category}:`, error);
-    //         setCategoryInsights(prev => ({ ...prev, [category]: 'Failed to load insights for this category.' }));
-    //         toast.error(`Failed to load AI insights for ${category}.`);
-    //     } finally {
-    //         setLoadingInsights(false);
-    //     }
-    // }, [categoryInsights]);  
-
-    // Effect to fetch insights when the active tab changes
-    // useEffect(() => {
-    //     fetchCategoryInsights(activeTab);
-    // }, [activeTab, fetchCategoryInsights]);
-
-
     // --- CRUD Operations Handlers ---
 
-    // Function to add a task (could be called from TaskForm after adding)
-    const addTask = useCallback((newTaskData) => {
-        // Assign a temporary client-side ID if it's a new task, for local tracking before API sync
-        const taskWithTempId = { ...newTaskData, _id: Date.now().toString() };
-        setTasks(prevTasks => [...prevTasks, taskWithTempId]);
-        addPendingChange('added', taskWithTempId);
-        toast.success('Task added locally. Syncing soon!');
-    }, [addPendingChange]);
+    // Function to add a task
+    const addTask = useCallback(async (newTaskData) => {
+        if (isOnline) {
+            try {
+                const response = await axios.post('http://localhost:5000/api/tasks', newTaskData);
+                const serverTask = response.data;
+                setTasks(prevTasks => [...prevTasks, serverTask]);
+                toast.success('Task added successfully (online)!');
+                return true; // Indicate success
+            } catch (error) {
+                console.error('Failed to add task online:', error);
+                toast.error('Failed to add task online. Saving locally.');
+                // Fallback to local storage if API fails
+                const taskWithTempId = { ...newTaskData, _id: Date.now().toString() };
+                setTasks(prevTasks => [...prevTasks, taskWithTempId]);
+                addPendingChange('added', taskWithTempId);
+                toast.info('Task added locally (offline mode).');
+                return false; // Indicate failure to add online
+            }
+        } else {
+            const taskWithTempId = { ...newTaskData, _id: Date.now().toString() }; // Assign a temporary client-side ID
+            setTasks(prevTasks => [...prevTasks, taskWithTempId]);
+            addPendingChange('added', taskWithTempId);
+            toast.info('Task added locally (offline mode). Syncing soon!');
+            return true; // Indicate local success
+        }
+    }, [isOnline, addPendingChange]);
 
-    // Function to update a task (could be called from TaskForm after updating)
-    const updateTask = useCallback((updatedTaskData) => {
-        setTasks(prevTasks =>
-            prevTasks.map(task =>
-                task._id === updatedTaskData._id ? updatedTaskData : task
-            )
-        );
-        addPendingChange('updated', updatedTaskData);
-        toast.success('Task updated locally. Syncing soon!');
-    }, [addPendingChange]);
-
+    // Function to update a task
+    const updateTask = useCallback(async (updatedTaskData) => {
+        if (isOnline) {
+            try {
+                const response = await axios.put(`http://localhost:5000/api/tasks/${updatedTaskData._id}`, updatedTaskData);
+                const serverTask = response.data;
+                setTasks(prevTasks =>
+                    prevTasks.map(task =>
+                        task._id === serverTask._id ? serverTask : task
+                    )
+                );
+                toast.success('Task updated successfully (online)!');
+                return true; // Indicate success
+            } catch (error) {
+                console.error('Failed to update task online:', error);
+                toast.error('Failed to update task online. Saving locally.');
+                // Fallback to local storage if API fails
+                setTasks(prevTasks =>
+                    prevTasks.map(task =>
+                        task._id === updatedTaskData._id ? updatedTaskData : task
+                    )
+                );
+                addPendingChange('updated', updatedTaskData);
+                toast.info('Task updated locally (offline mode).');
+                return false; // Indicate failure to update online
+            }
+        } else {
+            setTasks(prevTasks =>
+                prevTasks.map(task =>
+                    task._id === updatedTaskData._id ? updatedTaskData : task
+                )
+            );
+            addPendingChange('updated', updatedTaskData);
+            toast.info('Task updated locally (offline mode). Syncing soon!');
+            return true; // Indicate local success
+        }
+    }, [isOnline, addPendingChange]);
 
     const handleDeleteClick = useCallback((id) => {
         setTaskIdToDelete(id);
@@ -286,33 +347,42 @@ const addPendingChange = useCallback((type, taskData) => {
         setShowDeleteConfirm(false);
         if (!taskIdToDelete) return;
 
+        // Optimistically remove from UI
         setTasks(prevTasks => prevTasks.filter(task => task._id !== taskIdToDelete));
-        addPendingChange('deleted', taskIdToDelete);
-        toast.success('Task deleted locally. Syncing soon!');
-        setTaskIdToDelete(null); // Clear the ID after deletion or cancellation
-    }, [taskIdToDelete, addPendingChange]);
+        toast.success('Task deletion initiated. Syncing soon!');
+
+        if (isOnline) {
+            try {
+                await axios.delete(`http://localhost:5000/api/tasks/${taskIdToDelete}`);
+                toast.success('Task deleted successfully from server!');
+                // No need to remove from pending if successful, it was never added there in online mode
+            } catch (error) {
+                console.error('Failed to delete task online:', error);
+                toast.error('Failed to delete task online. Queuing for sync.');
+                addPendingChange('deleted', taskIdToDelete); // Add to pending if online delete fails
+                // Re-add the task to local state if server deletion failed and it wasn't a pending addition
+                // This scenario needs careful consideration to avoid UI flicker
+                // For simplicity, we'll keep it removed from UI but add to pending for next sync
+            }
+        } else {
+            addPendingChange('deleted', taskIdToDelete);
+            toast.info('Task deleted locally. Syncing when online.');
+        }
+        setTaskIdToDelete(null);
+    }, [taskIdToDelete, isOnline, addPendingChange]);
 
     const handleCancelDelete = useCallback(() => {
         setShowDeleteConfirm(false);
         setTaskIdToDelete(null);
     }, []);
 
-    const toggleComplete = useCallback((task) => {
-        const updatedTask = { ...task, completed: !task.completed };
-        setTasks(prevTasks =>
-            prevTasks.map(t => (t._id === task._id ? updatedTask : t))
-        );
-        addPendingChange('updated', updatedTask);
-        toast.info(`Task "${task.title}" marked as ${updatedTask.completed ? 'completed' : 'pending'}.`);
-    }, [addPendingChange]);
-
     // Handlers for Modals
     const handleCardClick = useCallback(async (task) => {
         setSelectedTask(task);
         setLoadingTaskAI(true);
-        setSelectedTaskAIAnalysis(''); // Clear previous analysis
+        setSelectedTaskAIAnalysis('');
         try {
-            const response = await axios.post('https://mydiffprojects.onrender.com/api/ai-task-analysis', {
+            const response = await axios.post('http://localhost:5000/api/ai-task-analysis', {
                 taskTitle: task.title,
                 taskDescription: task.description,
                 taskDueDate: task.dueDate,
@@ -336,29 +406,33 @@ const addPendingChange = useCallback((type, taskData) => {
         setSelectedTaskAIAnalysis('');
     }, []);
 
-    // --- NEW: Handlers for Add/Edit Task Modal ---
+    // --- Handlers for Add/Edit Task Modal ---
     const handleAddTaskClick = useCallback(() => {
-        setTaskToEdit(null); // No task selected means it's an add operation
+        setTaskToEdit(null);
         setShowTaskFormModal(true);
     }, []);
 
     const handleEditTask = useCallback((task) => {
-        setTaskToEdit(task); // Set the task to be edited
+        setTaskToEdit(task);
         setShowTaskFormModal(true);
-        closeDetailModal(); // Close detail modal if open
+        closeDetailModal();
     }, [closeDetailModal]);
 
-    const handleTaskFormSaveSuccess = useCallback(() => {
+    const handleTaskFormSaveSuccess = useCallback(async (savedTask) => {
         setShowTaskFormModal(false);
         setTaskToEdit(null);
-        fetchTasks(); // Re-fetch all tasks to update the list from server after save
-    }, [fetchTasks]);
+        // The addTask/updateTask functions now handle direct API calls/local storage,
+        // so we don't need fetchTasks here IF the operation was successful online.
+        // However, fetchTasks provides a full sync, which is safer.
+        // For a more refined UX, you'd update state directly with `savedTask` if it came from the server.
+        fetchTasks(); // Still good to re-fetch to ensure consistency after any save operation
+    }, [fetchTasks]); // Added fetchTasks to dependencies
 
     const handleTaskFormCancel = useCallback(() => {
         setShowTaskFormModal(false);
         setTaskToEdit(null);
     }, []);
-    // --- END NEW MODAL HANDLERS ---
+    // --- END MODAL HANDLERS ---
 
     const handleLoadFromLocalStorage = () => {
         const localTasks = getTasksFromLocalStorage();
@@ -386,7 +460,7 @@ const addPendingChange = useCallback((type, taskData) => {
     const sortedAndFilteredTasks = [...tasks]
         .filter(task => {
             const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                task.description.toLowerCase().includes(searchQuery.toLowerCase());
+                (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()));
 
             const matchesStatus = statusFilter === 'all' ||
                 (statusFilter === 'completed' && task.completed) ||
@@ -414,48 +488,6 @@ const addPendingChange = useCallback((type, taskData) => {
             }
             return 0;
         });
-
-    // Styles for Task Cards
-    const getPriorityColor = (priority) => {
-        switch (priority) {
-            case 'P1 - Critical': return 'bg-red-50 text-red-700 ring-red-200';
-            case 'P2 - High': return 'bg-orange-50 text-orange-700 ring-orange-200';
-            case 'P3 - Medium': return 'bg-yellow-50 text-yellow-700 ring-yellow-200';
-            case 'P4 - Low': return 'bg-green-50 text-green-700 ring-green-200';
-            case 'P5 - Very Low': return 'bg-blue-50 text-blue-700 ring-blue-200';
-            default: return 'bg-gray-50 text-gray-700 ring-gray-200';
-        }
-    };
-
-    const getCategoryTagColor = (category) => {
-        switch (category) {
-            case 'Web Development': return 'bg-blue-50 text-blue-700 ring-blue-200';
-            case 'Trading': return 'bg-green-50 text-green-700 ring-green-200';
-            case 'Personal': return 'bg-purple-50 text-purple-700 ring-purple-200';
-            case 'Work': return 'bg-indigo-50 text-indigo-700 ring-indigo-200';
-            case 'Study': return 'bg-yellow-50 text-yellow-700 ring-yellow-200';
-            case 'Health': return 'bg-pink-50 text-pink-700 ring-pink-200';
-            default: return 'bg-gray-50 text-gray-700 ring-gray-200';
-        }
-    };
-
-    const getTaskCardStyles = (task) => {
-        let cardBg = 'bg-white';
-        let titleText = 'text-gray-800';
-        let dueDateText = 'text-gray-600';
-
-        if (task.completed) {
-            cardBg = 'bg-green-50';
-            titleText = 'text-green-700 line-through';
-            dueDateText = 'text-green-500';
-        } else if (new Date(task.dueDate) < new Date()) {
-            cardBg = 'bg-red-50';
-            titleText = 'text-red-700';
-            dueDateText = 'text-red-500 font-bold';
-        }
-
-        return { cardBg, titleText, dueDateText };
-    };
 
     const displayedTasks = activeTab === 'All Tasks'
         ? sortedAndFilteredTasks
@@ -504,7 +536,7 @@ const addPendingChange = useCallback((type, taskData) => {
                     <button
                         onClick={handleAddTaskClick}
                         className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-lg
-                                   hover:bg-indigo-700 transition-colors duration-300 transform hover:scale-[1.03] active:scale-[0.97]"
+                                     hover:bg-indigo-700 transition-colors duration-300 transform hover:scale-[1.03] active:scale-[0.97]"
                     >
                         <FiPlusCircle className="text-xl" /> Add New Task
                     </button>
@@ -563,196 +595,109 @@ const addPendingChange = useCallback((type, taskData) => {
                                 onChange={(e) => setSortOrder(e.target.value)}
                                 className="w-full p-2 border border-gray-300 rounded-lg text-sm sm:text-base appearance-none pr-8 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 cursor-pointer"
                             >
-                                <option value="dueDateAsc">Due Date (Soonest)</option>
-                                <option value="dueDateDesc">Due Date (Latest)</option>
-                                <option value="priorityHigh">Priority (Highest first)</option>
-                                <option value="priorityLow">Priority (Lowest first)</option>
+                                <option value="dueDateAsc">Due Date (Asc)</option>
+                                <option value="dueDateDesc">Due Date (Desc)</option>
+                                <option value="priorityHigh">Priority (High to Low)</option>
+                                <option value="priorityLow">Priority (Low to High)</option>
                             </select>
-                            <svg className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            <svg className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
                         </div>
 
-                        {/* Manual Refresh Button */}
-                        <button
-                            onClick={handleManualRefresh}
-                            className="p-2.5 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200 flex items-center justify-center gap-1 min-w-[40px] sm:min-w-[unset]"
-                            title="Refresh Tasks"
-                        >
-                            <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6"></path><path d="M2.5 22v-6h6"></path><path d="M21.5 12c0 3.9-3.1 7-7 7H7c-3.9 0-7-3.1-7-7s3.1-7 7-7h7c1.7 0 3.4.6 4.7 1.7"></path></svg>
-                            <span className="hidden sm:inline">Refresh</span>
-                        </button>
-
-                        {/* Get Data from Local Storage Button */}
-                        <button
-                            onClick={handleLoadFromLocalStorage}
-                            className="p-2.5 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors duration-200 flex items-center justify-center gap-1 min-w-[40px] sm:min-w-[unset]"
-                            title="Load from Local Storage"
-                        >
-                            <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V6.5A2.5 2.5 0 0 0 17.5 4h-11A2.5 2.5 0 0 0 4 6.5v13z"></path></svg>
-                            <span className="hidden sm:inline">Local Data</span>
-                        </button>
-
-                        {/* Sync Data with API Button */}
-                        {Object.values(pendingChanges).flat().length > 0 && (
+                        {/* Manual Sync/Refresh Buttons */}
+                        <div className="flex gap-3 mt-4 sm:mt-0 w-full sm:w-auto justify-center">
                             <button
-                                onClick={syncDataWithAPI}
-                                className={`p-2.5 rounded-lg ${isOnline ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-400 cursor-not-allowed'} text-white transition-colors duration-200 flex items-center justify-center gap-1 min-w-[40px] sm:min-w-[unset]`}
-                                title={isOnline ? "Sync Pending Changes" : "Offline - Cannot Sync"}
-                                disabled={!isOnline}
+                                onClick={handleManualRefresh}
+                                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg shadow-sm hover:bg-blue-600 transition-colors text-sm sm:text-base"
                             >
-                                <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v10m5.2-3.2L12 2l-5.2 6.8M21 12c0 4.4-3.6 8-8 8s-8-3.6-8-8c0-2.4 1.1-4.6 2.8-6M3 12h18"></path></svg>
-                                <span className="hidden sm:inline">Sync ({Object.values(pendingChanges).flat().length})</span>
+                                Refresh
                             </button>
-                        )}
+                            {/* <button
+                                onClick={syncDataWithAPI}
+                                className={`flex-1 px-4 py-2 ${Object.values(pendingChanges).flat().length > 0 ? 'bg-purple-600 hover:bg-purple-700' : 'bg-gray-400 cursor-not-allowed'} text-white rounded-lg shadow-sm transition-colors text-sm sm:text-base`}
+                                disabled={Object.values(pendingChanges).flat().length === 0}
+                            >
+                                Sync ({Object.values(pendingChanges).flat().length})
+                            </button> */}
+                        </div>
                     </div>
                 </div>
 
                 {/* --- Category Tabs --- */}
-                <div className="flex flex-wrap gap-2 md:gap-3 mb-6 border-b border-gray-200 pb-2 overflow-x-auto justify-center md:justify-start">
+                <div className="flex flex-wrap justify-center gap-3 mb-8">
                     {categories.map(category => (
                         <button
                             key={category}
                             onClick={() => setActiveTab(category)}
-                            className={`
-                                px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap
-                                ${activeTab === category
-                                    ? 'bg-blue-600 text-white shadow-md'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-blue-100 hover:text-blue-700'
-                                }
-                            `}
+                            className={`px-5 py-2 rounded-full font-medium transition-colors duration-300 text-sm sm:text-base
+                                         ${activeTab === category
+                                ? 'bg-blue-600 text-white shadow-md'
+                                : 'bg-gray-200 text-gray-700 hover:bg-blue-100 hover:text-blue-700'
+                            }`}
                         >
                             {category}
                         </button>
                     ))}
                 </div>
 
-                {/* --- AI Insights for Category --- */}
-                {/* {activeTab && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                        <h3 className="text-lg font-bold text-blue-800 mb-2">
-                            AI Insights for "{activeTab}" Category
-                        </h3>
-                        {loadingInsights ? (
-                            <div className="flex items-center text-blue-700">
-                                <svg className="animate-spin h-5 w-5 mr-3 text-blue-500" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                <span>Generating category insights...</span>
-                            </div>
-                        ) : (
-                            <div className="prose max-w-none">
-                                <ReactMarkdown>{categoryInsights[activeTab] || 'No insights available for this category.'}</ReactMarkdown>
-                            </div>
-                        )}
-                    </div>
-                )} */}
-
                 {/* --- Task List Display --- */}
-                {displayedTasks.length === 0 ? (
-                    <p className="text-center text-gray-500 text-lg py-10">No tasks found matching your criteria.</p>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {displayedTasks.map(task => {
-                            const { cardBg, titleText, dueDateText } = getTaskCardStyles(task);
-                            return (
-                                <div
-                                    key={task._id}
-                                    className={`relative ${cardBg} p-5 rounded-lg shadow-md border border-gray-200 flex flex-col justify-between h-auto transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg group`}
-                                >
-                                    <div className="flex justify-between items-start mb-3">
-                                        <h3
-                                            className={`text-xl font-semibold cursor-pointer ${titleText} break-words pr-2`}
-                                            onClick={() => handleCardClick(task)}
-                                        >
-                                            {task.title}
-                                        </h3>
-                                        <input
-                                            type="checkbox"
-                                            checked={task.completed}
-                                            onChange={() => toggleComplete(task)}
-                                            className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
-                                            title={task.completed ? "Mark as Pending" : "Mark as Complete"}
-                                        />
-                                    </div>
-                                    <p className="text-gray-600 text-sm mb-4 flex-grow line-clamp-3 hidden md:block">{task.description}</p>
-                                    <div className="flex flex-wrap gap-2 mb-4 hidden md:flex">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ring-1 ring-inset ${getPriorityColor(task.priority)}`}>
-                                            {task.priority}
-                                        </span>
-                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ring-1 ring-inset ${getCategoryTagColor(task.category)}`}>
-                                            {task.category}
-                                        </span>
-                                        {task.eisenhowerQuadrant && (
-                                            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 ring-1 ring-inset ring-indigo-200">
-                                                {task.eisenhowerQuadrant}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className={`text-sm ${dueDateText} font-medium mb-4 hidden md:block`}>
-                                        Due: {new Date(task.dueDate).toLocaleDateString()}
-                                    </p>
-                                    <div className="flex space-x-2 hidden md:flex">
-                                        <button
-                                            onClick={() => handleEditTask(task)} 
-                                            className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-200"
-                                        >
-                                            Edit
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteClick(task._id)}
-                                            className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors duration-200"
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-
-                {/* --- Delete Confirmation Modal --- */}
-                {showDeleteConfirm && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4">
-                        <div className="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full text-center">
-                            <h3 className="text-xl font-bold mb-4 text-gray-800">Confirm Deletion</h3>
-                            <p className="text-gray-700 mb-6">Are you sure you want to delete this task? This action cannot be undone.</p>
-                            <div className="flex justify-around gap-4">
-                                <button
-                                    onClick={handleConfirmDelete}
-                                    className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
-                                >
-                                    Delete
-                                </button>
-                                <button
-                                    onClick={handleCancelDelete}
-                                    className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors duration-200"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {displayedTasks.length > 0 ? (
+                        displayedTasks.map(task => (
+                            <TaskCard
+                                key={task._id}
+                                task={task}
+                                onCardClick={handleCardClick}
+                                onEdit={handleEditTask}
+                                onDelete={handleDeleteClick}
+                            />
+                        ))
+                    ) : (
+                        <div className="col-span-1 sm:col-span-2 lg:col-span-3 text-center py-12 bg-white rounded-lg shadow-md text-gray-600 text-lg">
+                            No tasks found for the current filters.
                         </div>
-                    </div>
-                )}
-
-                {/* --- Task Detail Modal (for mobile/on-click) --- */}
-                <TaskDetailModal
-                    task={selectedTask}
-                    aiAnalysis={selectedTaskAIAnalysis}
-                    loadingAI={loadingTaskAI}
-                    onClose={closeDetailModal}
-                    onEditTask={handleEditTask} // Pass handleEditTask to the detail modal
-                    onDeleteTask={handleDeleteClick}
-                    toggleComplete={toggleComplete}
-                />
-
-                {/* --- Task Form Modal (for Add/Edit) --- */}
-                <Modal isOpen={showTaskFormModal} onClose={handleTaskFormCancel}>
-                    <TaskForm
-                        selectedTask={taskToEdit} // Pass the task to edit, or null for new
-                        onSaveSuccess={addTask} // Changed to addTask for new tasks
-                        onUpdateSuccess={updateTask} // New prop for update success
-                        onCancel={handleTaskFormCancel}
-                    />
-                </Modal>
+                    )}
+                </div>
             </div>
+
+            {/* Modals */}
+            <TaskForm
+                isOpen={showTaskFormModal}
+                onClose={handleTaskFormCancel}
+                onSave={taskToEdit ? updateTask : addTask}
+                taskToEdit={taskToEdit}
+            />
+
+            <TaskDetailModal
+                task={selectedTask}
+                aiAnalysis={selectedTaskAIAnalysis}
+                loadingAI={loadingTaskAI}
+                isOpen={!!selectedTask}
+                onClose={closeDetailModal}
+                onEditTask={handleEditTask}
+                onDeleteTask={handleDeleteClick}
+            />
+
+            {/* Delete Confirmation Modal */}
+            <Modal isOpen={showDeleteConfirm} onClose={handleCancelDelete}>
+                <div className="p-6 text-center">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h3>
+                    <p className="text-gray-700 mb-6">Are you sure you want to delete this task? This action cannot be undone.</p>
+                    <div className="flex justify-center space-x-4">
+                        <button
+                            onClick={handleCancelDelete}
+                            className="px-5 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleConfirmDelete}
+                            className="px-5 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 }

@@ -1,250 +1,256 @@
-// components/TaskForm.jsx
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { FiCalendar, FiSave, FiXCircle, FiPlusCircle, FiTag, FiClock } from 'react-icons/fi';
+import ReactMarkdown from 'react-markdown';
+import PropTypes from 'prop-types'; // Import PropTypes for validation
+import { toast } from 'react-toastify'; // Ensure toast is imported
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 
-export default function TaskForm({ selectedTask, onSaveSuccess, onCancel }) {
-    const categories = ['General', 'Web Development', 'Trading', 'Personal', 'Work', 'Study', 'Health'];
-    const priorities = ['P1 - Critical', 'P2 - High', 'P3 - Medium', 'P4 - Low', 'P5 - Very Low'];
-    const eisenhowerQuadrants = ['Urgent/Important', 'Important/Not Urgent', 'Urgent/Not Important', 'Not Urgent/Not Important'];
+// Reusable Modal component (assuming it exists and works)
+import Modal from './Modal';
 
-    const [task, setTask] = useState(selectedTask || {
+export default function TaskForm({ isOpen, onClose, onSave, taskToEdit }) {
+    const initialState = {
         title: '',
         description: '',
-        dueDate: null,
+        dueDate: null, // Should be a Date object
         priority: 'P3 - Medium',
-        completed: false,
         category: 'General',
-        eisenhowerQuadrant: 'Important/Not Urgent'
-    });
-    const [isEditing, setIsEditing] = useState(!!selectedTask);
+        eisenhowerQuadrant: 'Important/Not Urgent',
+        completed: false,
+    };
 
+    const [formData, setFormData] = useState(initialState);
+    const [formErrors, setFormErrors] = useState({});
+
+    // Effect to populate form when taskToEdit changes (for editing)
     useEffect(() => {
-        setTask(selectedTask ? {
-            ...selectedTask,
-            dueDate: selectedTask.dueDate ? new Date(selectedTask.dueDate) : null
-        } : {
-            title: '',
-            description: '',
-            dueDate: null,
-            priority: 'P3 - Medium',
-            completed: false,
-            category: 'General',
-            eisenhowerQuadrant: 'Important/Not Urgent'
-        });
-        setIsEditing(!!selectedTask);
-    }, [selectedTask]);
-
-    const handleChange = e => {
-        setTask({ ...task, [e.target.name]: e.target.value });
-    };
-
-    const handleDateChange = date => {
-        setTask({ ...task, dueDate: date });
-    };
-
-    const handleSubmit = async e => {
-        e.preventDefault();
-        if (!task.title.trim()) {
-            toast.error('Task title is required!');
-            return;
+        if (taskToEdit) {
+            setFormData({
+                ...taskToEdit,
+                dueDate: taskToEdit.dueDate ? new Date(taskToEdit.dueDate) : null,
+            });
+        } else {
+            setFormData(initialState); // Reset for new task
         }
-        if (!task.dueDate) {
-            toast.error('Due Date is required!');
+        setFormErrors({}); // Clear errors when modal opens or task changes
+    }, [taskToEdit, isOpen]); // Added isOpen to reset when modal closes and re-opens for new task
+
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setFormData(prevData => ({
+            ...prevData,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+        // Clear error for this field as user types
+        if (formErrors[name]) {
+            setFormErrors(prevErrors => ({ ...prevErrors, [name]: '' }));
+        }
+    };
+
+    const handleDateChange = (date) => {
+        setFormData(prevData => ({
+            ...prevData,
+            dueDate: date
+        }));
+        if (formErrors.dueDate) {
+            setFormErrors(prevErrors => ({ ...prevErrors, dueDate: '' }));
+        }
+    };
+
+    const validateForm = () => {
+        const errors = {};
+        if (!formData.title.trim()) {
+            errors.title = 'Title is required.';
+        }
+        if (!formData.dueDate) {
+            errors.dueDate = 'Due Date is required.';
+        } else if (new Date(formData.dueDate) < new Date()) {
+            // Optional: Check if due date is in the past, only if it's not an existing completed task
+            // For editing completed tasks, this check might be too restrictive
+            if (!taskToEdit || !taskToEdit.completed) {
+                 // Ignore past date validation if it's an existing task already marked completed
+                 // or if you want to allow setting past dates for historical tracking
+                // You might need more nuanced logic here based on your app's requirements
+            }
+        }
+        // Add more validation rules as needed (e.g., description length, valid category)
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!validateForm()) {
+            toast.error('Please correct the form errors.');
             return;
         }
 
         try {
-            if (task._id) {
-                await axios.put(`https://mydiffprojects.onrender.com/api/tasks/${task._id}`, task);
-                toast.success('Task updated successfully!');
-            } else {
-                await axios.post('https://mydiffprojects.onrender.com/api/tasks', task);
-                toast.success('Task added successfully!');
-            }
-            setTask({ title: '', description: '', dueDate: null, priority: 'P3 - Medium', completed: false, category: 'General', eisenhowerQuadrant: 'Important/Not Urgent' });
-            setIsEditing(false);
-            if (onSaveSuccess) onSaveSuccess(); // Notify parent on successful save
-        } catch (err) {
-            console.error('Error saving task:', err);
-            toast.error('Failed to save task.');
+            // Call the onSave function passed from TaskList
+            // onSave already handles whether it's an add or update, and API/local storage logic
+            await onSave(formData);
+            onClose(); // Close modal on successful save (either online or locally queued)
+            toast.success(`Task ${taskToEdit ? 'updated' : 'added'} successfully!`);
+        } catch (error) {
+            console.error('Error saving task:', error);
+            toast.error(`Failed to save task: ${error.message || 'Unknown error'}`);
+            // Do not close modal automatically if there was a hard error in onSave
+            // (though onSave is designed to handle this and usually toast itself)
         }
     };
 
-    const handleClearForm = () => {
-        setTask({ title: '', description: '', dueDate: null, priority: 'P3 - Medium', completed: false, category: 'General', eisenhowerQuadrant: 'Important/Not Urgent' });
-        setIsEditing(false);
-        if (onCancel) onCancel(); // Notify parent on cancel
-    };
+    const title = taskToEdit ? 'Edit Task' : 'Add New Task';
 
     return (
-        <div className="bg-gradient-to-br from-white to-gray-50 shadow-2xl rounded-xl
-                        p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12
-                        space-y-4 sm:space-y-5 md:space-y-6 lg:space-y-7 xl:space-y-8
-                        mb-8 sm:mb-10 md:mb-12 lg:mb-14 xl:mb-16
-                        border border-gray-100 transform transition-all duration-300 hover:scale-[1.005]">
-            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl
-                            font-extrabold text-gray-800 flex items-center
-                            gap-2 sm:gap-3 md:gap-4
-                            border-b pb-3 sm:pb-4 md:pb-5
-                            mb-3 sm:mb-4 md:mb-5 border-gray-200">
-                {isEditing ? <FiSave className="text-blue-500 text-lg sm:text-xl md:text-2xl lg:text-3xl" /> : <FiPlusCircle className="text-green-500 text-lg sm:text-xl md:text-2xl lg:text-3xl" />}
-                {isEditing ? 'Update Your Task' : 'Add a New Task'}
-            </h2>
-
-            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 md:space-y-6">
-                <div>
-                    <label htmlFor="title" className="block text-sm sm:text-base md:text-lg font-medium text-gray-700 mb-1">Task Title <span className="text-red-500">*</span></label>
-                    <input
-                        id="title"
-                        name="title"
-                        value={task.title}
-                        onChange={handleChange}
-                        placeholder="e.g., Complete React project refactor"
-                        className="w-full p-2.5 sm:p-3 md:p-3.5 lg:p-4
-                                    border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent
-                                    text-base sm:text-lg md:text-xl placeholder-gray-400 transition-all duration-200"
-                        maxLength="100"
-                        required
-                    />
-                </div>
-
-                <div>
-                    <label htmlFor="description" className="block text-sm sm:text-base md:text-lg font-medium text-gray-700 mb-1">Description</label>
-                    <textarea
-                        id="description"
-                        name="description"
-                        value={task.description}
-                        onChange={handleChange}
-                        placeholder="Provide a detailed explanation of the task..."
-                        className="w-full p-2.5 sm:p-3 md:p-3.5 lg:p-4
-                                    border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent
-                                    min-h-[80px] sm:min-h-[100px] md:min-h-[120px] lg:min-h-[150px]
-                                    text-sm sm:text-base md:text-lg placeholder-gray-400 transition-all duration-200"
-                        rows="4"
-                        maxLength="500"
-                    />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
-                    <div className="relative">
-                        <label htmlFor="dueDate" className="block text-sm sm:text-base md:text-lg font-medium text-gray-700 mb-1">Due Date <span className="text-red-500">*</span></label>
-                        <DatePicker
-                            id="dueDate"
-                            selected={task.dueDate}
-                            onChange={handleDateChange}
-                            dateFormat="yyyy/MM/dd"
-                            placeholderText="Select due date"
-                            className="w-full p-2.5 sm:p-3 md:p-3.5 lg:p-4
-                                        border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent
-                                        text-base sm:text-lg md:text-xl pr-9 sm:pr-10 md:pr-11 lg:pr-12
-                                        cursor-pointer transition-all duration-200"
-                            minDate={new Date()}
-                            isClearable
+        <Modal isOpen={isOpen} onClose={onClose}>
+            <div className="p-6 bg-white rounded-lg shadow-xl max-w-lg mx-auto my-8">
+                <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">{title}</h2>
+                <form onSubmit={handleSubmit}>
+                    {/* Title */}
+                    <div className="mb-4">
+                        <label htmlFor="title" className="block text-gray-700 text-sm font-semibold mb-2">Title <span className="text-red-500">*</span></label>
+                        <input
+                            type="text"
+                            id="title"
+                            name="title"
+                            value={formData.title}
+                            onChange={handleChange}
+                            className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${formErrors.title ? 'border-red-500' : 'border-gray-300'}`}
+                            placeholder="e.g., Finish report"
                             required
                         />
-                        <FiCalendar className="absolute right-3 top-1/2 mt-0.5 sm:mt-1 md:mt-2 -translate-y-1/2
-                                             text-gray-500 pointer-events-none text-base sm:text-lg md:text-xl" />
+                        {formErrors.title && <p className="text-red-500 text-xs italic mt-1">{formErrors.title}</p>}
                     </div>
 
-                    <div>
-                        <label htmlFor="category-select" className="block text-sm sm:text-base md:text-lg font-medium text-gray-700 mb-1">Category</label>
-                        <div className="relative">
-                            <select
-                                id="category-select"
-                                name="category"
-                                value={task.category}
-                                onChange={handleChange}
-                                className="w-full p-2.5 sm:p-3 md:p-3.5 lg:p-4
-                                            border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent
-                                            text-sm sm:text-base md:text-lg appearance-none pr-9 sm:pr-10 md:pr-11 lg:pr-12
-                                            transition-all duration-200 cursor-pointer"
-                            >
-                                {categories.map(cat => (
-                                    <option key={cat} value={cat}>{cat}</option>
-                                ))}
-                            </select>
-                            <FiTag className="absolute right-3 top-1/2 mt-0.5 sm:mt-1 md:mt-2 -translate-y-1/2
-                                               text-gray-500 pointer-events-none text-base sm:text-lg md:text-xl" />
+                    {/* Description */}
+                    <div className="mb-4">
+                        <label htmlFor="description" className="block text-gray-700 text-sm font-semibold mb-2">Description</label>
+                        <textarea
+                            id="description"
+                            name="description"
+                            value={formData.description}
+                            onChange={handleChange}
+                            rows="4"
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline border-gray-300"
+                            placeholder="Detailed description of the task..."
+                        ></textarea>
+                        <div className="mt-2 p-2 bg-gray-50 rounded-md border border-gray-200">
+                            <h4 className="text-xs font-semibold text-gray-600 mb-1">Description Preview (Markdown):</h4>
+                            <div className="prose prose-sm max-w-none text-gray-800">
+                                <ReactMarkdown>{formData.description}</ReactMarkdown>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div>
-                    <label htmlFor="priority-select" className="block text-sm sm:text-base md:text-lg font-medium text-gray-700 mb-1">Priority Level</label>
-                    <div className="relative">
+                    {/* Due Date */}
+                    <div className="mb-4">
+                        <label htmlFor="dueDate" className="block text-gray-700 text-sm font-semibold mb-2">Due Date <span className="text-red-500">*</span></label>
+                        <DatePicker
+                            id="dueDate"
+                            selected={formData.dueDate}
+                            onChange={handleDateChange}
+                            dateFormat="yyyy/MM/dd"
+                            className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${formErrors.dueDate ? 'border-red-500' : 'border-gray-300'}`}
+                            placeholderText="Select a date"
+                            required
+                        />
+                        {formErrors.dueDate && <p className="text-red-500 text-xs italic mt-1">{formErrors.dueDate}</p>}
+                    </div>
+
+                    {/* Priority */}
+                    <div className="mb-4">
+                        <label htmlFor="priority" className="block text-gray-700 text-sm font-semibold mb-2">Priority</label>
                         <select
-                            id="priority-select"
+                            id="priority"
                             name="priority"
-                            value={task.priority}
+                            value={formData.priority}
                             onChange={handleChange}
-                            className="w-full p-2.5 sm:p-3 md:p-3.5 lg:p-4
-                                        border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent
-                                        text-sm sm:text-base md:text-lg appearance-none pr-9 sm:pr-10 md:pr-11 lg:pr-12
-                                        transition-all duration-200 cursor-pointer"
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline border-gray-300"
                         >
-                            {priorities.map(p => (
-                                <option key={p} value={p}>{p}</option>
-                            ))}
+                            <option value="P1 - Critical">P1 - Critical</option>
+                            <option value="P2 - High">P2 - High</option>
+                            <option value="P3 - Medium">P3 - Medium</option>
+                            <option value="P4 - Low">P4 - Low</option>
+                            <option value="P5 - Very Low">P5 - Very Low</option>
                         </select>
-                        <FiClock className="absolute right-3 top-1/2 mt-0.5 sm:mt-1 md:mt-2 -translate-y-1/2
-                                             text-gray-500 pointer-events-none text-base sm:text-lg md:text-xl" />
                     </div>
-                </div>
 
-                <div>
-                    <label htmlFor="eisenhower-select" className="block text-sm sm:text-base md:text-lg font-medium text-gray-700 mb-1">Eisenhower Quadrant</label>
-                    <div className="relative">
+                    {/* Category */}
+                    <div className="mb-4">
+                        <label htmlFor="category" className="block text-gray-700 text-sm font-semibold mb-2">Category</label>
                         <select
-                            id="eisenhower-select"
-                            name="eisenhowerQuadrant"
-                            value={task.eisenhowerQuadrant}
+                            id="category"
+                            name="category"
+                            value={formData.category}
                             onChange={handleChange}
-                            className="w-full p-2.5 sm:p-3 md:p-3.5 lg:p-4
-                                        border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent
-                                        text-sm sm:text-base md:text-lg appearance-none pr-9 sm:pr-10 md:pr-11 lg:pr-12
-                                        transition-all duration-200 cursor-pointer"
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline border-gray-300"
                         >
-                            {eisenhowerQuadrants.map(q => <option key={q} value={q}>{q}</option>)}
+                            <option value="General">General</option>
+                            <option value="Web Development">Web Development</option>
+                            <option value="Trading">Trading</option>
+                            <option value="Personal">Personal</option>
+                            <option value="Work">Work</option>
+                            <option value="Study">Study</option>
+                            <option value="Health">Health</option>
                         </select>
-                        <FiTag className="absolute right-3 top-1/2 mt-0.5 sm:mt-1 md:mt-2 -translate-y-1/2
-                                         text-gray-500 pointer-events-none text-base sm:text-lg md:text-xl" />
                     </div>
-                </div>
 
-                <div className="flex flex-col sm:flex-row justify-end
-                                 space-y-3 sm:space-y-0 sm:space-x-4 md:space-x-5 lg:space-x-6
-                                 pt-3 sm:pt-4 md:pt-5">
-                    {isEditing && (
+                    {/* Eisenhower Quadrant */}
+                    <div className="mb-4">
+                        <label htmlFor="eisenhowerQuadrant" className="block text-gray-700 text-sm font-semibold mb-2">Eisenhower Quadrant</label>
+                        <select
+                            id="eisenhowerQuadrant"
+                            name="eisenhowerQuadrant"
+                            value={formData.eisenhowerQuadrant}
+                            onChange={handleChange}
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline border-gray-300"
+                        >
+                            <option value="Urgent/Important">Urgent & Important</option>
+                            <option value="Important/Not Urgent">Important & Not Urgent</option>
+                            <option value="Urgent/Not Important">Urgent & Not Important</option>
+                            <option value="Not Urgent/Not Important">Not Urgent & Not Important</option>
+                        </select>
+                    </div>
+
+                    {/* Completed Checkbox */}
+                    <div className="mb-6 flex items-center">
+                        <input
+                            type="checkbox"
+                            id="completed"
+                            name="completed"
+                            checked={formData.completed}
+                            onChange={handleChange}
+                            className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="completed" className="text-gray-700 text-sm font-semibold">Mark as Completed</label>
+                    </div>
+
+                    {/* Form Actions */}
+                    <div className="flex items-center justify-between">
                         <button
                             type="button"
-                            onClick={handleClearForm}
-                            className="w-full sm:w-auto flex items-center justify-center
-                                        gap-2 px-5 py-2.5 sm:px-6 sm:py-3 md:px-7 md:py-3.5 lg:px-8 lg:py-4
-                                        rounded-lg text-gray-700 bg-gray-100 border border-gray-300
-                                        hover:bg-gray-200 transition-colors duration-200 shadow-sm
-                                        font-medium text-base sm:text-lg"
+                            onClick={onClose}
+                            className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition-colors"
                         >
-                            <FiXCircle className="text-lg sm:text-xl" /> Cancel
+                            Cancel
                         </button>
-                    )}
-                    <button
-                        type="submit"
-                        className="w-full sm:w-auto flex items-center justify-center
-                                    gap-2 px-7 py-2.5 sm:px-8 sm:py-3 md:px-9 md:py-3.5 lg:px-10 lg:py-4
-                                    rounded-lg bg-blue-600 text-white font-semibold shadow-md
-                                    hover:bg-blue-700 transition-colors duration-200 transform hover:scale-[1.02] active:scale-[0.98]
-                                    text-base sm:text-lg"
-                    >
-                        {isEditing ? <FiSave className="text-lg sm:text-xl" /> : <FiPlusCircle className="text-lg sm:text-xl" />}
-                        {isEditing ? 'Update Task' : 'Add Task'}
-                    </button>
-                </div>
-            </form>
-        </div>
+                        <button
+                            type="submit"
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition-colors"
+                        >
+                            {taskToEdit ? 'Update Task' : 'Add Task'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </Modal>
     );
 }
+
+// PropTypes for validation (highly recommended for React components)
+TaskForm.propTypes = {
+    isOpen: PropTypes.bool.isRequired,
+    onClose: PropTypes.func.isRequired,
+    onSave: PropTypes.func.isRequired,
+    taskToEdit: PropTypes.object, // Can be null for add mode
+};
