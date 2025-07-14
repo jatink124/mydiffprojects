@@ -3,7 +3,7 @@ import React from 'react';
 import { FiEdit3, FiTrash2 } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
 
-const TaskDetailModal = ({ task, aiAnalysis, loadingAI, onClose, onEditTask, onDeleteTask }) => { // Removed toggleComplete prop
+const TaskDetailModal = ({ task, aiAnalysis, loadingAI, onClose, onEditTask, onDeleteTask }) => {
     if (!task) return null; // Don't render if no task is selected
 
     const handleEditClick = () => {
@@ -16,18 +16,18 @@ const TaskDetailModal = ({ task, aiAnalysis, loadingAI, onClose, onEditTask, onD
         onDeleteTask(task._id); // Then trigger delete confirmation in parent
     };
 
-    // Removed handleCheckboxChange as the checkbox is removed
-
     return (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-60 p-4" onClick={onClose}>
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-100 opacity-100" onClick={e => e.stopPropagation()}>
-                <div className="flex justify-between items-center p-5 border-b border-gray-200">
-                    <h3 className="text-2xl font-bold text-gray-800">{task.title}</h3>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 transition-colors">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-60 p-4 sm:p-6" onClick={onClose}>
+            <div className="bg-white rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-100 opacity-100
+                        max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl" // Apply responsive max-widths
+                 onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center p-4 sm:p-5 border-b border-gray-200">
+                    <h3 className="text-xl sm:text-2xl font-bold text-gray-800">{task.title}</h3> {/* Responsive font size */}
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100"> {/* Increased tap area */}
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 </div>
-                <div className="p-5 space-y-4 text-gray-700">
+                <div className="p-4 sm:p-5 space-y-3 sm:space-y-4 text-gray-700"> {/* Adjusted padding and spacing */}
                     <p className="text-sm">
                         <strong className="font-semibold">Due Date:</strong> {new Date(task.dueDate).toLocaleDateString()}
                     </p>
@@ -42,40 +42,39 @@ const TaskDetailModal = ({ task, aiAnalysis, loadingAI, onClose, onEditTask, onD
                             <strong className="font-semibold">Eisenhower Quadrant:</strong> {task.eisenhowerQuadrant}
                         </p>
                     )}
-                    {/* Removed the checkbox and its associated label */}
                     <p className="text-sm">
                         <strong className="font-semibold">Completed:</strong> {task.completed ? 'Yes' : 'No'}
                     </p>
 
-                    <p className="text-gray-800 font-medium text-lg mt-4">Description:</p>
-                    <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">{task.description || 'No description provided.'}</p>
+                    <p className="text-gray-800 font-medium text-base sm:text-lg mt-3 sm:mt-4">Description:</p>
+                    <p className="text-gray-600 leading-relaxed whitespace-pre-wrap text-sm sm:text-base">{task.description || 'No description provided.'}</p>
 
                     {/* AI Analysis Section */}
-                    <div className="mt-6 border-t border-gray-200 pt-4">
-                        <h4 className="text-lg font-bold text-blue-700 mb-2">AI Analysis</h4>
+                    <div className="mt-5 sm:mt-6 border-t border-gray-200 pt-3 sm:pt-4">
+                        <h4 className="text-base sm:text-lg font-bold text-blue-700 mb-2">AI Analysis</h4>
                         {loadingAI ? (
-                            <div className="flex items-center text-blue-600">
+                            <div className="flex items-center text-blue-600 text-sm">
                                 <svg className="animate-spin h-5 w-5 mr-3 text-blue-500" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                                 <span>Generating AI analysis...</span>
                             </div>
                         ) : (
-                            <div className="prose max-w-none text-sm text-gray-600">
+                            <div className="prose max-w-none text-xs sm:text-sm text-gray-600">
                                 <ReactMarkdown>{aiAnalysis || 'No AI analysis available for this task.'}</ReactMarkdown>
                             </div>
                         )}
                     </div>
                 </div>
 
-                <div className="p-5 border-t border-gray-200 flex justify-end space-x-3">
+                <div className="p-4 sm:p-5 border-t border-gray-200 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
                     <button
                         onClick={handleEditClick}
-                        className="flex items-center px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors"
+                        className="flex items-center justify-center px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors text-sm sm:text-base"
                     >
                         <FiEdit3 className="mr-2" /> Edit
                     </button>
                     <button
                         onClick={handleDeleteClick}
-                        className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                        className="flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm sm:text-base"
                     >
                         <FiTrash2 className="mr-2" /> Delete
                     </button>
